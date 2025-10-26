@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -918,6 +919,57 @@
                 loadProjects();
             }, [user]);
 
+            // Real-time sync - Listen for changes from other users
+            useEffect(() => {
+                if (!user || !currentProjectId) return;
+                
+                console.log('🔔 Setting up real-time sync for project:', currentProjectId);
+                
+                const channel = supabaseClient
+                    .channel(`project-${currentProjectId}`)
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'projects',
+                            filter: `id=eq.${currentProjectId}`
+                        },
+                        (payload) => {
+                            console.log('🔄 Real-time update received:', payload);
+                            const updatedProject = payload.new;
+                            
+                            // Only update if the change came from another user/session
+                            if (updatedProject) {
+                                // Update local state with new data
+                                setProjectName(updatedProject.name || '');
+                                setProjectDescription(updatedProject.description || '');
+                                setProjectDeadline(updatedProject.deadline || '');
+                                setTasks(updatedProject.tasks || []);
+                                setPrimaryColor(updatedProject.primary_color || '#8b5cf6');
+                                setSecondaryColor(updatedProject.secondary_color || '#ec4899');
+                                setDarkMode(updatedProject.dark_mode || false);
+                                setLayoutStyle(updatedProject.layout_style || 'modern');
+                                
+                                // Update projects array
+                                setProjects(prevProjects => 
+                                    prevProjects.map(p => 
+                                        p.id === currentProjectId ? updatedProject : p
+                                    )
+                                );
+                                
+                                showToast('🔄 Project updated by another user', 'info');
+                            }
+                        }
+                    )
+                    .subscribe();
+                
+                // Cleanup subscription on unmount or when project changes
+                return () => {
+                    console.log('🔕 Cleaning up real-time subscription');
+                    supabaseClient.removeChannel(channel);
+                };
+            }, [currentProjectId, user]);
 
             // Auto-save to Supabase
             useEffect(() => {
