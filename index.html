@@ -977,41 +977,58 @@
                 showToast('✅ Projects refreshed!', 'success');
             };
             
-            // Refresh current project from database
+            // Refresh current project from database - FULL reload
             const refreshCurrentProject = async () => {
                 if (!currentProjectId || !user) return;
                 
-                showToast('🔄 Refreshing project...', 'info');
-                
-                const { data, error } = await supabaseClient
-                    .from('projects')
-                    .select('*')
-                    .eq('id', currentProjectId)
-                    .single();
-                
-                if (error) {
-                    console.error('Error refreshing project:', error);
-                    showToast('Failed to refresh project', 'error');
-                    return;
-                }
-                
-                if (data) {
-                    setProjectName(data.name || '');
-                    setProjectDescription(data.description || '');
-                    setProjectDeadline(data.deadline || '');
-                    setTasks(data.tasks || []);
-                    setPrimaryColor(data.primary_color || '#8b5cf6');
-                    setSecondaryColor(data.secondary_color || '#ec4899');
-                    setLayoutStyle(data.layout_style || 'modern');
+                try {
+                    setIsSaving(true); // Prevent interactions during refresh
+                    showToast('🔄 Refreshing project...', 'info');
                     
-                    // Update projects array
-                    setProjects(prevProjects => 
-                        prevProjects.map(p => 
-                            p.id === currentProjectId ? data : p
-                        )
-                    );
+                    const { data, error } = await supabaseClient
+                        .from('projects')
+                        .select('*')
+                        .eq('id', currentProjectId)
+                        .single();
                     
-                    showToast('✅ Project refreshed!', 'success');
+                    if (error) {
+                        console.error('Error refreshing project:', error);
+                        showToast('❌ Failed to refresh. Press F5 to reload page.', 'error');
+                        setIsSaving(false);
+                        return;
+                    }
+                    
+                    if (data) {
+                        // Update ALL project state
+                        setProjectName(data.name || '');
+                        setProjectDescription(data.description || '');
+                        setProjectDeadline(data.deadline || '');
+                        setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+                        setPrimaryColor(data.primary_color || '#8b5cf6');
+                        setSecondaryColor(data.secondary_color || '#ec4899');
+                        setLayoutStyle(data.layout_style || 'modern');
+                        
+                        // Update projects array
+                        setProjects(prevProjects => 
+                            prevProjects.map(p => 
+                                p.id === currentProjectId ? data : p
+                            )
+                        );
+                        
+                        // Reset UI states
+                        setEditingTask(null);
+                        setEditingProject(false);
+                        setShowSearch(false);
+                        setSearchQuery('');
+                        
+                        showToast('✅ Project refreshed!', 'success');
+                    }
+                    
+                    setIsSaving(false);
+                } catch (error) {
+                    console.error('Refresh error:', error);
+                    showToast('❌ Refresh failed. Press F5 to reload.', 'error');
+                    setIsSaving(false);
                 }
             };
 
@@ -1019,48 +1036,54 @@
             const saveCurrentProject = async () => {
                 if (!currentProjectId || !user) return;
                 
-                setIsSaving(true);
-                showToast('💾 Saving project...', 'info');
-                
-                console.log('💾 Saving project...', { 
-                    currentProjectId, 
-                    projectName,
-                    tasksCount: tasks.length
-                });
-                
-                const { data, error } = await supabaseClient
-                    .from('projects')
-                    .update({
-                        name: projectName,
-                        description: projectDescription,
-                        deadline: projectDeadline,
-                        tasks,
-                        primary_color: primaryColor,
-                        secondary_color: secondaryColor,
-                        dark_mode: darkMode,
-                        layout_style: layoutStyle
-                    })
-                    .eq('id', currentProjectId)
-                    .select();
-                
-                if (error) {
-                    console.error('❌ Error saving project:', error);
-                    showToast('❌ Failed to save project', 'error');
-                } else {
-                    console.log('✅ Project saved successfully!', data);
-                    showToast('✅ Project saved!', 'success');
+                try {
+                    setIsSaving(true);
+                    showToast('💾 Saving project...', 'info');
                     
-                    // Update local projects array
-                    if (data && data[0]) {
-                        setProjects(prevProjects => 
-                            prevProjects.map(p => 
-                                p.id === currentProjectId ? data[0] : p
-                            )
-                        );
+                    console.log('💾 Saving project...', { 
+                        currentProjectId, 
+                        projectName,
+                        tasksCount: tasks.length
+                    });
+                    
+                    const { data, error } = await supabaseClient
+                        .from('projects')
+                        .update({
+                            name: projectName,
+                            description: projectDescription,
+                            deadline: projectDeadline,
+                            tasks,
+                            primary_color: primaryColor,
+                            secondary_color: secondaryColor,
+                            dark_mode: darkMode,
+                            layout_style: layoutStyle
+                        })
+                        .eq('id', currentProjectId)
+                        .select();
+                    
+                    if (error) {
+                        console.error('❌ Error saving project:', error);
+                        showToast('❌ Failed to save project', 'error');
+                    } else {
+                        console.log('✅ Project saved successfully!', data);
+                        showToast('✅ Project saved!', 'success');
+                        
+                        // Update local projects array
+                        if (data && data[0]) {
+                            setProjects(prevProjects => 
+                                prevProjects.map(p => 
+                                    p.id === currentProjectId ? data[0] : p
+                                )
+                            );
+                        }
                     }
+                } catch (error) {
+                    console.error('Save error:', error);
+                    showToast('❌ Save failed', 'error');
+                } finally {
+                    // ALWAYS reset saving state, even on error
+                    setIsSaving(false);
                 }
-                
-                setIsSaving(false);
             };
 
             const getAllTasks = (taskList) => {
@@ -1881,8 +1904,16 @@
                                         Welcome, {userUsername ? `@${userUsername}` : 'Game Dev'} 👋
                                     </h2>
                                     <button 
-                                        onClick={refreshProjects}
+                                        onClick={(e) => {
+                                            // Shift+Click = Full page reload
+                                            if (e.shiftKey) {
+                                                window.location.reload();
+                                            } else {
+                                                refreshProjects();
+                                            }
+                                        }}
                                         className={`px-6 py-3 rounded-xl font-semibold flex items-center gap-2 ${globalDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                        title="Refresh (Shift+Click for full reload)"
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -2645,9 +2676,16 @@
                                         <BarChart className="w-6 h-6" style={{ color: primaryColor }} />
                                     </button>
                                     <button 
-                                        onClick={refreshCurrentProject}
+                                        onClick={(e) => {
+                                            // Shift+Click = Full page reload
+                                            if (e.shiftKey) {
+                                                window.location.reload();
+                                            } else {
+                                                refreshCurrentProject();
+                                            }
+                                        }}
                                         className={`p-3 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`} 
-                                        title="Refresh Project"
+                                        title="Refresh Project (Shift+Click for full page reload)"
                                     >
                                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: primaryColor }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
