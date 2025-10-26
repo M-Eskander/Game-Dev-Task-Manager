@@ -1013,13 +1013,47 @@
                     setIsSaving(true); // Prevent interactions during refresh
                     showToast('🔄 Refreshing project...', 'info');
                     
-                    console.log('Refreshing project:', currentProjectId);
+                    console.log('🔄 Refreshing project:', currentProjectId);
                     
-                    const { data, error } = await supabaseClient
-                        .from('projects')
-                        .select('*')
-                        .eq('id', currentProjectId)
-                        .maybeSingle(); // Use maybeSingle instead of single to avoid error if no row
+                    // First check if we're owner or member
+                    const currentProject = projects.find(p => p.id === currentProjectId);
+                    const isOwner = currentProject?.owner_id === user.id;
+                    
+                    console.log('Is owner?', isOwner);
+                    
+                    let data, error;
+                    
+                    if (isOwner) {
+                        // Owner can query directly
+                        const result = await supabaseClient
+                            .from('projects')
+                            .select('*')
+                            .eq('id', currentProjectId)
+                            .maybeSingle();
+                        data = result.data;
+                        error = result.error;
+                    } else {
+                        // Member needs to query via project_members join
+                        const result = await supabaseClient
+                            .from('project_members')
+                            .select('project_id')
+                            .eq('project_id', currentProjectId)
+                            .eq('user_id', user.id)
+                            .single();
+                        
+                        if (result.data) {
+                            // We're a member, now get the project
+                            const projectResult = await supabaseClient
+                                .from('projects')
+                                .select('*')
+                                .eq('id', currentProjectId)
+                                .maybeSingle();
+                            data = projectResult.data;
+                            error = projectResult.error;
+                        } else {
+                            error = { message: 'You are not a member of this project' };
+                        }
+                    }
                     
                     if (error) {
                         console.error('❌ Refresh error:', error);
@@ -1614,12 +1648,7 @@
                 setLoadingMembers(true);
                 
                 try {
-                    // Get project to find owner
-                    const { data: project } = await supabaseClient
-                        .from('projects')
-                        .select('owner_id')
-                        .eq('id', projectId)
-                        .single();
+                    console.log('📥 Loading members for project:', projectId);
                     
                     // Get members from project_members table
                     const { data: members, error } = await supabaseClient
@@ -1628,19 +1657,34 @@
                         .eq('project_id', projectId);
                     
                     if (error) {
-                        console.error('Error loading members:', error);
+                        console.error('❌ Error loading members:', error);
+                        setProjectMembers([]);
+                        setLoadingMembers(false);
+                        return;
+                    }
+                    
+                    console.log('✅ Raw members:', members);
+                    
+                    if (!members || members.length === 0) {
+                        console.log('⚠️ No members found');
+                        setProjectMembers([]);
+                        setLoadingMembers(false);
+                        return;
                     }
                     
                     // Load usernames for all members
-                    const allMemberIds = new Set();
-                    if (project?.owner_id) allMemberIds.add(project.owner_id);
-                    if (members) members.forEach(m => allMemberIds.add(m.user_id));
+                    const memberIds = members.map(m => m.user_id);
                     
-                    // Get all usernames at once
-                    const { data: profiles } = await supabaseClient
+                    const { data: profiles, error: profileError } = await supabaseClient
                         .from('user_profiles')
                         .select('id, username')
-                        .in('id', Array.from(allMemberIds));
+                        .in('id', memberIds);
+                    
+                    if (profileError) {
+                        console.error('❌ Error loading profiles:', profileError);
+                    }
+                    
+                    console.log('✅ Profiles:', profiles);
                     
                     const usernameMap = {};
                     if (profiles) {
@@ -1650,19 +1694,15 @@
                     }
                     
                     // Build member list with usernames
-                    const membersWithDetails = (members || []).map(member => ({
+                    const membersWithDetails = members.map(member => ({
                         ...member,
                         username: usernameMap[member.user_id] || 'Unknown'
                     }));
                     
+                    console.log('✅ Members with details:', membersWithDetails);
                     setProjectMembers(membersWithDetails);
-                    
-                    // Store owner info for display
-                    if (project?.owner_id && usernameMap[project.owner_id]) {
-                        // Owner info is already in the projects array
-                    }
                 } catch (error) {
-                    console.error('Error loading members:', error);
+                    console.error('❌ Error loading members:', error);
                     setProjectMembers([]);
                 }
                 
