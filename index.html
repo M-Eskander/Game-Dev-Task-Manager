@@ -191,7 +191,7 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
         
         // Simple icon components
         const Plus = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>;
@@ -919,6 +919,10 @@
                 loadProjects();
             }, [user]);
 
+            // Track if we're currently saving to prevent sync loops
+            const [isSaving, setIsSaving] = useState(false);
+            const lastUpdateTime = useRef(Date.now());
+
             // Real-time sync - Listen for changes from other users
             useEffect(() => {
                 if (!user || !currentProjectId) return;
@@ -939,8 +943,17 @@
                             console.log('🔄 Real-time update received:', payload);
                             const updatedProject = payload.new;
                             
+                            // Prevent sync loop: Don't update if we just saved (within 2 seconds)
+                            const timeSinceLastUpdate = Date.now() - lastUpdateTime.current;
+                            if (isSaving || timeSinceLastUpdate < 2000) {
+                                console.log('⏭️ Skipping real-time update (we just saved)');
+                                return;
+                            }
+                            
                             // Only update if the change came from another user/session
                             if (updatedProject) {
+                                console.log('✅ Applying real-time update from another user');
+                                
                                 // Update content, but NOT personal preferences like dark mode
                                 setProjectName(updatedProject.name || '');
                                 setProjectDescription(updatedProject.description || '');
@@ -1046,6 +1059,9 @@
                 if (!hasLoaded || !user || !currentProjectId) return;
                 
                 const saveProject = async () => {
+                    setIsSaving(true); // Mark that we're saving
+                    lastUpdateTime.current = Date.now(); // Record save time
+                    
                     console.log('🔄 Auto-saving project...', { 
                         currentProjectId, 
                         projectName,
@@ -1082,6 +1098,9 @@
                             );
                         }
                     }
+                    
+                    // Allow real-time updates after a brief delay
+                    setTimeout(() => setIsSaving(false), 1500);
                 };
                 
                 const timeoutId = setTimeout(saveProject, 1000); // Debounce 1 second
