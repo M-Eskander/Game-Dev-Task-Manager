@@ -2756,23 +2756,36 @@
                                     </div>
                                     
                                     <div className="space-y-4">
-                                        {/* Current Project Owner */}
-                                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
-                                                        <span className="text-white font-bold">{user.email[0].toUpperCase()}</span>
-                                                    </div>
-                                                    <div>
-                                                        <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{user.email}</p>
-                                                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Owner</p>
+                                        {/* Project Owner */}
+                                        {(() => {
+                                            const currentProject = projects.find(p => p.id === currentProjectId);
+                                            const isOwner = currentProject?.owner_id === user.id;
+                                            
+                                            return (
+                                                <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
+                                                                <span className="text-white font-bold">
+                                                                    {isOwner ? user.email[0].toUpperCase() : (userUsername?.[0]?.toUpperCase() || 'O')}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                                                    {isOwner ? (userUsername ? `@${userUsername}` : user.email) : 'Project Owner'}
+                                                                </p>
+                                                                <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Owner</p>
+                                                            </div>
+                                                        </div>
+                                                        {isOwner && (
+                                                            <span className="px-3 py-1 rounded-lg text-xs font-bold text-white" style={{ backgroundColor: primaryColor }}>You</span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <span className="px-3 py-1 rounded-lg text-xs font-bold text-white" style={{ backgroundColor: primaryColor }}>You</span>
-                                            </div>
-                                        </div>
+                                            );
+                                        })()}
 
-                                        {/* Other Members */}
+                                        {/* Members */}
                                         {loadingMembers ? (
                                             <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                                 Loading members...
@@ -2782,58 +2795,80 @@
                                                 No other members yet. Invite someone to collaborate!
                                             </div>
                                         ) : (
-                                            projectMembers.map(member => (
-                                                <div key={member.id} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                                                                <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                                                    {member.username?.[0]?.toUpperCase() || 'U'}
-                                                                </span>
+                                            projectMembers.map(member => {
+                                                const isYou = member.user_id === user.id;
+                                                return (
+                                                    <div key={member.id} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                                                    <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                                                        {member.username?.[0]?.toUpperCase() || 'U'}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                                                        @{member.username || 'Unknown User'}
+                                                                    </p>
+                                                                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                                        Member {isYou && '(You)'}
+                                                                    </p>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                                                    @{member.username || 'Unknown User'}
-                                                                </p>
-                                                                <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                                    {member.role === 'owner' ? 'Owner' : 'Member'}
-                                                                </p>
-                                                            </div>
+                                                            {!isYou && (
+                                                                <button 
+                                                                    onClick={() => removeProjectMember(member.id)}
+                                                                    className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            )}
                                                         </div>
-                                                        <button 
-                                                            onClick={() => removeProjectMember(member.id)}
-                                                            className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
                                                     </div>
-                                                </div>
-                                            ))
+                                                );
+                                            })
                                         )}
 
-                                        {/* Add Member */}
-                                        <div className={`p-4 rounded-lg border-2 border-dashed ${darkMode ? 'border-gray-600 bg-gray-800/50' : 'border-gray-300 bg-white/50'}`}>
-                                            <h4 className={`font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Invite Member</h4>
-                                            <div className="flex gap-3">
-                                                <input 
-                                                    type="text"
-                                                    value={newMemberUsername}
-                                                    onChange={(e) => setNewMemberUsername(e.target.value)}
-                                                    placeholder="Enter username..."
-                                                    className={`flex-1 px-4 py-3 border-2 rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'}`}
-                                                />
-                                                <button 
-                                                    onClick={() => addProjectMember(newMemberUsername)}
-                                                    className="px-6 py-3 text-white rounded-xl font-semibold hover:scale-105 transition-transform"
-                                                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
-                                                >
-                                                    Invite
-                                                </button>
-                                            </div>
-                                            <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                They'll receive an invitation they can accept or decline.
-                                            </p>
-                                        </div>
+                                        {/* Add Member - Only for Owner */}
+                                        {(() => {
+                                            const currentProject = projects.find(p => p.id === currentProjectId);
+                                            const isOwner = currentProject?.owner_id === user.id;
+                                            
+                                            if (!isOwner) {
+                                                return (
+                                                    <div className={`p-4 rounded-lg border-2 ${darkMode ? 'border-gray-600 bg-gray-800/50' : 'border-gray-300 bg-gray-50'} text-center`}>
+                                                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                            Only the project owner can invite members.
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            
+                                            return (
+                                                <div className={`p-4 rounded-lg border-2 border-dashed ${darkMode ? 'border-gray-600 bg-gray-800/50' : 'border-gray-300 bg-white/50'}`}>
+                                                    <h4 className={`font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Invite Member</h4>
+                                                    <div className="flex gap-3">
+                                                        <input 
+                                                            type="text"
+                                                            value={newMemberUsername}
+                                                            onChange={(e) => setNewMemberUsername(e.target.value)}
+                                                            placeholder="Enter username..."
+                                                            className={`flex-1 px-4 py-3 border-2 rounded-xl ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'}`}
+                                                        />
+                                                        <button 
+                                                            onClick={() => addProjectMember(newMemberUsername)}
+                                                            className="px-6 py-3 text-white rounded-xl font-semibold hover:scale-105 transition-transform"
+                                                            style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+                                                        >
+                                                            Invite
+                                                        </button>
+                                                    </div>
+                                                    <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                        They'll receive an invitation they can accept or decline.
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             )}
