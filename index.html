@@ -985,15 +985,24 @@
                     setIsSaving(true); // Prevent interactions during refresh
                     showToast('🔄 Refreshing project...', 'info');
                     
+                    console.log('Refreshing project:', currentProjectId);
+                    
                     const { data, error } = await supabaseClient
                         .from('projects')
                         .select('*')
                         .eq('id', currentProjectId)
-                        .single();
+                        .maybeSingle(); // Use maybeSingle instead of single to avoid error if no row
                     
                     if (error) {
-                        console.error('Error refreshing project:', error);
-                        showToast('❌ Failed to refresh. Press F5 to reload page.', 'error');
+                        console.error('❌ Refresh error:', error);
+                        showToast(`❌ Refresh failed: ${error.message}`, 'error');
+                        setIsSaving(false);
+                        return;
+                    }
+                    
+                    if (!data) {
+                        console.error('❌ Project not found or no access');
+                        showToast('❌ Cannot access project. You may not have permission.', 'error');
                         setIsSaving(false);
                         return;
                     }
@@ -1283,6 +1292,13 @@
                         e.preventDefault();
                         setShowStatistics(prev => !prev);
                     }
+                    // Ctrl/Cmd + R for refresh (prevent default browser reload)
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'r' && currentProjectId) {
+                        e.preventDefault();
+                        refreshCurrentProject();
+                        showToast('Refreshing project...', 'info');
+                    }
+                    // F5 for full page reload (let it work normally)
                     // Escape to close modals
                     if (e.key === 'Escape') {
                         setShowSearch(false);
@@ -1568,32 +1584,60 @@
             // Group Project Member Management
             const loadProjectMembers = async (projectId) => {
                 setLoadingMembers(true);
-                const { data, error } = await supabaseClient
-                    .from('project_members')
-                    .select('*')
-                    .eq('project_id', projectId);
                 
-                if (error) {
+                try {
+                    // Get project to find owner
+                    const { data: project } = await supabaseClient
+                        .from('projects')
+                        .select('owner_id')
+                        .eq('id', projectId)
+                        .single();
+                    
+                    // Get members from project_members table
+                    const { data: members, error } = await supabaseClient
+                        .from('project_members')
+                        .select('*')
+                        .eq('project_id', projectId);
+                    
+                    if (error) {
+                        console.error('Error loading members:', error);
+                    }
+                    
+                    // Load usernames for all members
+                    const allMemberIds = new Set();
+                    if (project?.owner_id) allMemberIds.add(project.owner_id);
+                    if (members) members.forEach(m => allMemberIds.add(m.user_id));
+                    
+                    // Get all usernames at once
+                    const { data: profiles } = await supabaseClient
+                        .from('user_profiles')
+                        .select('id, username')
+                        .in('id', Array.from(allMemberIds));
+                    
+                    const usernameMap = {};
+                    if (profiles) {
+                        profiles.forEach(p => {
+                            usernameMap[p.id] = p.username;
+                        });
+                    }
+                    
+                    // Build member list with usernames
+                    const membersWithDetails = (members || []).map(member => ({
+                        ...member,
+                        username: usernameMap[member.user_id] || 'Unknown'
+                    }));
+                    
+                    setProjectMembers(membersWithDetails);
+                    
+                    // Store owner info for display
+                    if (project?.owner_id && usernameMap[project.owner_id]) {
+                        // Owner info is already in the projects array
+                    }
+                } catch (error) {
                     console.error('Error loading members:', error);
                     setProjectMembers([]);
-                } else {
-                    // Load user details for each member
-                    if (data && data.length > 0) {
-                        const membersWithDetails = await Promise.all(
-                            data.map(async (member) => {
-                                const { data: profile } = await supabaseClient
-                                    .from('user_profiles')
-                                    .select('username')
-                                    .eq('id', member.user_id)
-                                    .single();
-                                return { ...member, username: profile?.username || 'Unknown' };
-                            })
-                        );
-                        setProjectMembers(membersWithDetails);
-                    } else {
-                        setProjectMembers([]);
-                    }
                 }
+                
                 setLoadingMembers(false);
             };
 
@@ -2685,7 +2729,7 @@
                                             }
                                         }}
                                         className={`p-3 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`} 
-                                        title="Refresh Project (Shift+Click for full page reload)"
+                                        title="Refresh Project (Ctrl+R or Shift+Click for full reload)"
                                     >
                                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: primaryColor }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -2798,19 +2842,39 @@
                                         {(() => {
                                             const currentProject = projects.find(p => p.id === currentProjectId);
                                             const isOwner = currentProject?.owner_id === user.id;
+                                            const [ownerUsername, setOwnerUsername] = useState('Loading...');
+                                            
+                                            // Load owner username
+                                            useEffect(() => {
+                                                if (currentProject?.owner_id && !isOwner) {
+                                                    supabaseClient
+                                                        .from('user_profiles')
+                                                        .select('username')
+                                                        .eq('id', currentProject.owner_id)
+                                                        .single()
+                                                        .then(({ data }) => {
+                                                            if (data) setOwnerUsername(data.username);
+                                                        });
+                                                }
+                                            }, [currentProject?.owner_id]);
+                                            
+                                            const displayName = isOwner 
+                                                ? (userUsername ? `@${userUsername}` : user.email)
+                                                : (ownerUsername !== 'Loading...' ? `@${ownerUsername}` : 'Project Owner');
+                                            const initial = isOwner 
+                                                ? (userUsername?.[0] || user.email[0]).toUpperCase()
+                                                : (ownerUsername?.[0] || 'O').toUpperCase();
                                             
                                             return (
                                                 <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
-                                                                <span className="text-white font-bold">
-                                                                    {isOwner ? user.email[0].toUpperCase() : (userUsername?.[0]?.toUpperCase() || 'O')}
-                                                                </span>
+                                                                <span className="text-white font-bold">{initial}</span>
                                                             </div>
                                                             <div>
                                                                 <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                                                    {isOwner ? (userUsername ? `@${userUsername}` : user.email) : 'Project Owner'}
+                                                                    {displayName}
                                                                 </p>
                                                                 <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Owner</p>
                                                             </div>
