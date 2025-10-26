@@ -201,6 +201,7 @@
         const Trash2 = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
         const Edit2 = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
         const Settings = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+        const Save = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>;
         const Calendar = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
         const Moon = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>;
         const Sun = ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
@@ -1054,58 +1055,53 @@
                 };
             }, [user]);
 
-            // Auto-save to Supabase
-            useEffect(() => {
-                if (!hasLoaded || !user || !currentProjectId) return;
+            // Save project function (called when leaving project)
+            const saveCurrentProject = async () => {
+                if (!currentProjectId || !user) return;
                 
-                const saveProject = async () => {
-                    setIsSaving(true); // Mark that we're saving
-                    lastUpdateTime.current = Date.now(); // Record save time
+                setIsSaving(true);
+                lastUpdateTime.current = Date.now();
+                
+                console.log('💾 Saving project on exit...', { 
+                    currentProjectId, 
+                    projectName,
+                    tasksCount: tasks.length
+                });
+                
+                const { data, error } = await supabaseClient
+                    .from('projects')
+                    .update({
+                        name: projectName,
+                        description: projectDescription,
+                        deadline: projectDeadline,
+                        tasks,
+                        primary_color: primaryColor,
+                        secondary_color: secondaryColor,
+                        dark_mode: darkMode,
+                        layout_style: layoutStyle
+                    })
+                    .eq('id', currentProjectId)
+                    .select();
+                
+                if (error) {
+                    console.error('❌ Error saving project:', error);
+                    showToast('Failed to save project', 'error');
+                } else {
+                    console.log('✅ Project saved successfully!', data);
+                    showToast('💾 Project saved!', 'success');
                     
-                    console.log('🔄 Auto-saving project...', { 
-                        currentProjectId, 
-                        projectName,
-                        tasksCount: tasks.length,
-                        tasks: tasks
-                    });
-                    const { data, error } = await supabaseClient
-                        .from('projects')
-                        .update({
-                            name: projectName,
-                            description: projectDescription,
-                            deadline: projectDeadline,
-                            tasks,
-                            primary_color: primaryColor,
-                            secondary_color: secondaryColor,
-                            dark_mode: darkMode,
-                            layout_style: layoutStyle
-                        })
-                        .eq('id', currentProjectId)
-                        .select();
-                    
-                    if (error) {
-                        console.error('❌ Error saving project:', error);
-                    } else {
-                        console.log('✅ Project saved successfully!', data);
-                        console.log('   Saved tasks:', data[0]?.tasks);
-                        
-                        // Update local projects array to keep it in sync
-                        if (data && data[0]) {
-                            setProjects(prevProjects => 
-                                prevProjects.map(p => 
-                                    p.id === currentProjectId ? data[0] : p
-                                )
-                            );
-                        }
+                    // Update local projects array
+                    if (data && data[0]) {
+                        setProjects(prevProjects => 
+                            prevProjects.map(p => 
+                                p.id === currentProjectId ? data[0] : p
+                            )
+                        );
                     }
-                    
-                    // Allow real-time updates after a brief delay
-                    setTimeout(() => setIsSaving(false), 1500);
-                };
+                }
                 
-                const timeoutId = setTimeout(saveProject, 1000); // Debounce 1 second
-                return () => clearTimeout(timeoutId);
-            }, [tasks, projectName, projectDescription, projectDeadline, primaryColor, secondaryColor, darkMode, layoutStyle, currentProjectId, hasLoaded, user]);
+                setTimeout(() => setIsSaving(false), 1000);
+            };
 
             const getAllTasks = (taskList) => {
                 let all = [];
@@ -1317,9 +1313,16 @@
                 return () => window.removeEventListener('keydown', handleKeyPress);
             }, [currentProjectId, selectedCategory]);
 
-            const switchProject = (projectId) => {
+            const switchProject = async (projectId) => {
                 try {
                     console.log('Switching to project:', projectId);
+                    
+                    // Save current project before switching
+                    if (currentProjectId && currentProjectId !== projectId) {
+                        console.log('💾 Saving current project before switch...');
+                        await saveCurrentProject();
+                    }
+                    
                     // Load new project data
                     const newProject = projects.find(p => p.id === projectId);
                     console.log('Found project:', newProject);
@@ -2564,8 +2567,9 @@
                         <div className={`rounded-3xl shadow-2xl p-8 mb-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex-1 flex items-center gap-4">
-                                    <button onClick={() => {
-                                        // Return to dashboard (auto-save will handle saving)
+                                    <button onClick={async () => {
+                                        // Save before returning to dashboard
+                                        await saveCurrentProject();
                                         setCurrentProjectId(null);
                                     }} className={`px-4 py-3 rounded-xl font-semibold flex items-center gap-2 ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>
                                         ← Projects
@@ -2670,6 +2674,9 @@
                                     </button>
                                     <button onClick={() => setShowStatistics(!showStatistics)} className={`p-3 rounded-xl ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`} title="Statistics (Ctrl+S)">
                                         <BarChart className="w-6 h-6" style={{ color: primaryColor }} />
+                                    </button>
+                                    <button onClick={saveCurrentProject} className={`p-3 rounded-xl ${isSaving ? 'opacity-50' : ''} ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`} title="Save Project (Auto-saves when leaving)" disabled={isSaving}>
+                                        <Save className="w-6 h-6" style={{ color: primaryColor }} />
                                     </button>
                                     <button onClick={() => {
                                         setShowMembersModal(!showMembersModal);
