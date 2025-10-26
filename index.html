@@ -1069,7 +1069,6 @@
                         );
                         
                         // Reset UI states
-                        setEditingTask(null);
                         setEditingProject(false);
                         setShowSearch(false);
                         setSearchQuery('');
@@ -1637,16 +1636,19 @@
                         .rpc('get_project_members', { project_uuid: projectId });
                     
                     if (error) {
-                        console.error('❌ Error loading members:', error);
+                        console.error('❌ RPC Error loading members:', error);
+                        console.error('Error details:', JSON.stringify(error, null, 2));
+                        showToast(`❌ Error: ${error.message || 'Failed to load members'}`, 'error');
                         setProjectMembers([]);
                         setLoadingMembers(false);
                         return;
                     }
                     
-                    console.log('✅ Raw members:', members);
+                    console.log('✅ Raw members from RPC:', members);
+                    console.log('Members count:', members?.length || 0);
                     
                     if (!members || members.length === 0) {
-                        console.log('⚠️ No members found');
+                        console.log('⚠️ No members found (project has no invited members yet)');
                         setProjectMembers([]);
                         setLoadingMembers(false);
                         return;
