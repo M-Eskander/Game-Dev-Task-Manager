@@ -941,15 +941,15 @@
                             
                             // Only update if the change came from another user/session
                             if (updatedProject) {
-                                // Update local state with new data
+                                // Update content, but NOT personal preferences like dark mode
                                 setProjectName(updatedProject.name || '');
                                 setProjectDescription(updatedProject.description || '');
                                 setProjectDeadline(updatedProject.deadline || '');
                                 setTasks(updatedProject.tasks || []);
                                 setPrimaryColor(updatedProject.primary_color || '#8b5cf6');
                                 setSecondaryColor(updatedProject.secondary_color || '#ec4899');
-                                setDarkMode(updatedProject.dark_mode || false);
                                 setLayoutStyle(updatedProject.layout_style || 'modern');
+                                // Note: Dark mode is NOT synced - it's a personal preference
                                 
                                 // Update projects array
                                 setProjects(prevProjects => 
@@ -964,12 +964,82 @@
                     )
                     .subscribe();
                 
+                // Listen for project deletions
+                channel.on(
+                    'postgres_changes',
+                    {
+                        event: 'DELETE',
+                        schema: 'public',
+                        table: 'projects',
+                        filter: `id=eq.${currentProjectId}`
+                    },
+                    (payload) => {
+                        console.log('🗑️ Project deleted:', payload);
+                        showToast('⚠️ This project was deleted by the owner', 'warning');
+                        // Return to dashboard after 2 seconds
+                        setTimeout(() => {
+                            setCurrentProjectId(null);
+                            setProjects(prevProjects => prevProjects.filter(p => p.id !== currentProjectId));
+                        }, 2000);
+                    }
+                );
+                
                 // Cleanup subscription on unmount or when project changes
                 return () => {
                     console.log('🔕 Cleaning up real-time subscription');
                     supabaseClient.removeChannel(channel);
                 };
             }, [currentProjectId, user]);
+
+            // Real-time sync for invitations
+            useEffect(() => {
+                if (!user) return;
+                
+                console.log('🔔 Setting up real-time sync for invitations');
+                
+                const invitationChannel = supabaseClient
+                    .channel('user-invitations')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'project_invitations',
+                            filter: `invited_user_id=eq.${user.id}`
+                        },
+                        (payload) => {
+                            console.log('📬 New invitation received:', payload);
+                            const newInvite = payload.new;
+                            if (newInvite && newInvite.status === 'pending') {
+                                setPendingInvitations(prev => [...prev, newInvite]);
+                                showToast('📬 New project invitation received!', 'success');
+                            }
+                        }
+                    )
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'project_invitations',
+                            filter: `invited_user_id=eq.${user.id}`
+                        },
+                        (payload) => {
+                            console.log('📝 Invitation updated:', payload);
+                            const updated = payload.new;
+                            if (updated && updated.status !== 'pending') {
+                                // Remove from pending if accepted/declined
+                                setPendingInvitations(prev => prev.filter(inv => inv.id !== updated.id));
+                            }
+                        }
+                    )
+                    .subscribe();
+                
+                return () => {
+                    console.log('🔕 Cleaning up invitation subscription');
+                    supabaseClient.removeChannel(invitationChannel);
+                };
+            }, [user]);
 
             // Auto-save to Supabase
             useEffect(() => {
