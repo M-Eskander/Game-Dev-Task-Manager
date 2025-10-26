@@ -755,6 +755,7 @@
             const [projectMembers, setProjectMembers] = useState([]);
             const [newMemberUsername, setNewMemberUsername] = useState('');
             const [loadingMembers, setLoadingMembers] = useState(false);
+            const [projectOwnerUsername, setProjectOwnerUsername] = useState(null);
             const [pendingInvitations, setPendingInvitations] = useState([]);
             const [userUsername, setUserUsername] = useState('');
 
@@ -776,6 +777,33 @@
                 
                 loadUsername();
             }, [user]);
+
+            // Load project owner username when project changes
+            useEffect(() => {
+                if (!currentProjectId) {
+                    setProjectOwnerUsername(null);
+                    return;
+                }
+                
+                const currentProject = projects.find(p => p.id === currentProjectId);
+                if (!currentProject || currentProject.owner_id === user.id) {
+                    setProjectOwnerUsername(null); // We're the owner, no need to load
+                    return;
+                }
+                
+                // Load owner username
+                const loadOwnerUsername = async () => {
+                    const { data } = await supabaseClient
+                        .from('user_profiles')
+                        .select('username')
+                        .eq('id', currentProject.owner_id)
+                        .single();
+                    if (data) {
+                        setProjectOwnerUsername(data.username);
+                    }
+                };
+                loadOwnerUsername();
+            }, [currentProjectId, projects, user]);
 
             // Load user preferences from localStorage
             useEffect(() => {
@@ -2842,28 +2870,13 @@
                                         {(() => {
                                             const currentProject = projects.find(p => p.id === currentProjectId);
                                             const isOwner = currentProject?.owner_id === user.id;
-                                            const [ownerUsername, setOwnerUsername] = useState('Loading...');
-                                            
-                                            // Load owner username
-                                            useEffect(() => {
-                                                if (currentProject?.owner_id && !isOwner) {
-                                                    supabaseClient
-                                                        .from('user_profiles')
-                                                        .select('username')
-                                                        .eq('id', currentProject.owner_id)
-                                                        .single()
-                                                        .then(({ data }) => {
-                                                            if (data) setOwnerUsername(data.username);
-                                                        });
-                                                }
-                                            }, [currentProject?.owner_id]);
                                             
                                             const displayName = isOwner 
                                                 ? (userUsername ? `@${userUsername}` : user.email)
-                                                : (ownerUsername !== 'Loading...' ? `@${ownerUsername}` : 'Project Owner');
+                                                : (projectOwnerUsername ? `@${projectOwnerUsername}` : 'Project Owner');
                                             const initial = isOwner 
                                                 ? (userUsername?.[0] || user.email[0]).toUpperCase()
-                                                : (ownerUsername?.[0] || 'O').toUpperCase();
+                                                : (projectOwnerUsername?.[0] || 'O').toUpperCase();
                                             
                                             return (
                                                 <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
