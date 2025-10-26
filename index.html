@@ -856,7 +856,7 @@
                         console.error('❌ Error loading owned projects:', ownedError);
                     }
                     
-                    // Load projects where user is a member
+                    // Load projects where user is a member (using RPC function)
                     const { data: memberships } = await supabaseClient
                         .from('project_members')
                         .select('project_id')
@@ -864,13 +864,14 @@
                     
                     let memberProjects = [];
                     if (memberships && memberships.length > 0) {
-                        const projectIds = memberships.map(m => m.project_id);
-                        const { data: sharedProjects } = await supabaseClient
-                            .from('projects')
-                            .select('*')
-                            .in('id', projectIds);
-                        if (sharedProjects) {
-                            memberProjects = sharedProjects;
+                        // Use RPC function for each member project
+                        for (const membership of memberships) {
+                            const { data: projectData } = await supabaseClient
+                                .rpc('get_project_if_member', { project_uuid: membership.project_id });
+                            
+                            if (projectData && projectData.length > 0) {
+                                memberProjects.push(projectData[0]);
+                            }
                         }
                     }
                     
@@ -967,7 +968,7 @@
                     console.error('❌ Error loading owned projects:', ownedError);
                 }
                 
-                // Load projects where user is a member
+                // Load projects where user is a member (using RPC function)
                 const { data: memberships } = await supabaseClient
                     .from('project_members')
                     .select('project_id')
@@ -975,13 +976,14 @@
                 
                 let memberProjects = [];
                 if (memberships && memberships.length > 0) {
-                    const projectIds = memberships.map(m => m.project_id);
-                    const { data: sharedProjects } = await supabaseClient
-                        .from('projects')
-                        .select('*')
-                        .in('id', projectIds);
-                    if (sharedProjects) {
-                        memberProjects = sharedProjects;
+                    // Use RPC function for each member project
+                    for (const membership of memberships) {
+                        const { data: projectData } = await supabaseClient
+                            .rpc('get_project_if_member', { project_uuid: membership.project_id });
+                        
+                        if (projectData && projectData.length > 0) {
+                            memberProjects.push(projectData[0]);
+                        }
                     }
                 }
                 
@@ -1010,61 +1012,41 @@
                 if (!currentProjectId || !user) return;
                 
                 try {
-                    setIsSaving(true); // Prevent interactions during refresh
+                    setIsSaving(true);
                     showToast('🔄 Refreshing project...', 'info');
                     
                     console.log('🔄 Refreshing project:', currentProjectId);
                     
-                    // First check if we're owner or member
-                    const currentProject = projects.find(p => p.id === currentProjectId);
-                    const isOwner = currentProject?.owner_id === user.id;
+                    // Try owner query first
+                    let { data, error } = await supabaseClient
+                        .from('projects')
+                        .select('*')
+                        .eq('id', currentProjectId)
+                        .eq('owner_id', user.id)
+                        .maybeSingle();
                     
-                    console.log('Is owner?', isOwner);
-                    
-                    let data, error;
-                    
-                    if (isOwner) {
-                        // Owner can query directly
+                    // If not owner, try member function
+                    if (!data && !error) {
+                        console.log('Not owner, trying member access...');
                         const result = await supabaseClient
-                            .from('projects')
-                            .select('*')
-                            .eq('id', currentProjectId)
-                            .maybeSingle();
-                        data = result.data;
-                        error = result.error;
-                    } else {
-                        // Member needs to query via project_members join
-                        const result = await supabaseClient
-                            .from('project_members')
-                            .select('project_id')
-                            .eq('project_id', currentProjectId)
-                            .eq('user_id', user.id)
-                            .single();
+                            .rpc('get_project_if_member', { project_uuid: currentProjectId });
                         
-                        if (result.data) {
-                            // We're a member, now get the project
-                            const projectResult = await supabaseClient
-                                .from('projects')
-                                .select('*')
-                                .eq('id', currentProjectId)
-                                .maybeSingle();
-                            data = projectResult.data;
-                            error = projectResult.error;
-                        } else {
-                            error = { message: 'You are not a member of this project' };
+                        if (result.data && result.data.length > 0) {
+                            data = result.data[0];
                         }
+                        error = result.error;
                     }
                     
                     if (error) {
                         console.error('❌ Refresh error:', error);
-                        showToast(`❌ Refresh failed: ${error.message}`, 'error');
+                        showToast('❌ Refresh failed. Press F5 to reload page.', 'error');
                         setIsSaving(false);
                         return;
                     }
                     
                     if (!data) {
-                        console.error('❌ Project not found or no access');
-                        showToast('❌ Cannot access project. You may not have permission.', 'error');
+                        console.error('❌ Project not found');
+                        showToast('❌ Project not found. Press F5 to reload.', 'error');
                         setIsSaving(false);
                         return;
                     }
@@ -1650,11 +1632,9 @@
                 try {
                     console.log('📥 Loading members for project:', projectId);
                     
-                    // Get members from project_members table
+                    // Use RPC function to bypass RLS
                     const { data: members, error } = await supabaseClient
-                        .from('project_members')
-                        .select('*')
-                        .eq('project_id', projectId);
+                        .rpc('get_project_members', { project_uuid: projectId });
                     
                     if (error) {
                         console.error('❌ Error loading members:', error);
