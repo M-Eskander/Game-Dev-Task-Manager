@@ -866,11 +866,21 @@
                     if (memberships && memberships.length > 0) {
                         // Use RPC function for each member project
                         for (const membership of memberships) {
-                            const { data: projectData } = await supabaseClient
-                                .rpc('get_project_if_member', { project_uuid: membership.project_id });
-                            
-                            if (projectData && projectData.length > 0) {
-                                memberProjects.push(projectData[0]);
+                            try {
+                                const { data: projectData, error } = await supabaseClient
+                                    .rpc('get_project_if_member', { project_uuid: membership.project_id });
+                                
+                                if (error) {
+                                    console.error('RPC error for project:', membership.project_id, error);
+                                    // Skip this project if RPC fails
+                                    continue;
+                                }
+                                
+                                if (projectData && projectData.length > 0) {
+                                    memberProjects.push(projectData[0]);
+                                }
+                            } catch (err) {
+                                console.error('Failed to load member project:', membership.project_id, err);
                             }
                         }
                     }
@@ -978,11 +988,20 @@
                 if (memberships && memberships.length > 0) {
                     // Use RPC function for each member project
                     for (const membership of memberships) {
-                        const { data: projectData } = await supabaseClient
-                            .rpc('get_project_if_member', { project_uuid: membership.project_id });
-                        
-                        if (projectData && projectData.length > 0) {
-                            memberProjects.push(projectData[0]);
+                        try {
+                            const { data: projectData, error } = await supabaseClient
+                                .rpc('get_project_if_member', { project_uuid: membership.project_id });
+                            
+                            if (error) {
+                                console.error('RPC error for project:', membership.project_id, error);
+                                continue;
+                            }
+                            
+                            if (projectData && projectData.length > 0) {
+                                memberProjects.push(projectData[0]);
+                            }
+                        } catch (err) {
+                            console.error('Failed to load member project:', membership.project_id, err);
                         }
                     }
                 }
