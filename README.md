@@ -36,11 +36,11 @@ A beautiful, feature-rich task management application designed specifically for 
 
 ## 🚀 Live Demo
 
-**Try it now:** [https://YOUR-USERNAME.github.io/game-dev-task-manager](https://YOUR-USERNAME.github.io/game-dev-task-manager)
+**Try it now:** [https://m-eskander.github.io/Game-Dev-Task-Manager](https://m-eskander.github.io/Game-Dev-Task-Manager)
 
 ## 📥 Desktop App
 
-Download the Windows desktop app from the [Releases](https://github.com/YOUR-USERNAME/game-dev-task-manager/releases) page.
+Download the Windows desktop app from the [Releases](https://github.com/M-Eskander/Game-Dev-Task-Manager/releases) page.
 
 ## 🛠️ Tech Stack
 
@@ -64,10 +64,10 @@ Just visit the live demo link - no installation needed!
 ### Run Locally
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR-USERNAME/game-dev-task-manager.git
+git clone https://github.com/M-Eskander/Game-Dev-Task-Manager.git
 
 # Navigate to the directory
-cd game-dev-task-manager
+cd Game-Dev-Task-Manager
 
 # Open index.html in your browser
 # Or use a local server like:
@@ -136,7 +136,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 👨‍💻 Author
 
-Created by [@YOUR-USERNAME](https://github.com/YOUR-USERNAME)
+Created by [@M-Eskander](https://github.com/M-Eskander)
 
 ## 🙏 Acknowledgments
 
@@ -148,7 +148,7 @@ Created by [@YOUR-USERNAME](https://github.com/YOUR-USERNAME)
 ## 📞 Support
 
 If you encounter any issues or have questions:
-- Open an [Issue](https://github.com/YOUR-USERNAME/game-dev-task-manager/issues)
+- Open an [Issue](https://github.com/M-Eskander/Game-Dev-Task-Manager/issues)
 - Check existing issues for solutions
 - Read the documentation above
 
