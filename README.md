@@ -1,50 +1,159 @@
 # 🎮 Game Dev Task Manager
 
-A beautiful, feature-rich task management application designed specifically for game developers. Manage your solo projects or collaborate with your team in real-time!
+A beautiful, feature-rich task management application designed specifically for game developers. Manage solo projects or collaborate with your team in real-time!
 
 ## ✨ Features
 
-- 🎨 **Beautiful UI** - Modern, responsive design with dark mode support
-- 👥 **Group Projects** - Invite team members by username and collaborate in real-time
-- 📋 **Task Management** - Create tasks, subtasks, and track progress
-- 🎯 **Categories** - Organize by Story, Art, Programming, Sound, and more
-- 💡 **Ideas Board** - Save your future project ideas
-- 🎨 **Customization** - Personalize colors and layout per project
-- 🔒 **Secure** - User authentication with Supabase
-- 📱 **Responsive** - Works on desktop, tablet, and mobile
+### 🎯 Core Features
+- **Beautiful UI** with customizable colors and themes
+- **Dark/Light Mode** for comfortable viewing
+- **Multiple Project Support** - organize different games/projects
+- **Task Management** with priorities, deadlines, and categories
+- **Subtasks** - break down complex tasks
+- **Progress Tracking** - visual progress bars and statistics
+- **Search & Filter** - quickly find tasks
+- **Drag & Drop** - reorder tasks easily
+
+### 👥 Collaboration Features
+- **User Authentication** - secure login/signup with email verification
+- **Unique Usernames** - find and invite team members
+- **Group Projects** - invite others by username
+- **Invitation System** - accept/decline project invitations
+- **Member Management** - view all project members
+- **Role-Based Access** - owners can manage members
+
+### 💾 Data Management
+- **Auto-Save** to Supabase cloud database
+- **Manual Save/Refresh** - full control over syncing
+- **Export/Import** - backup your data as JSON
+- **Persistent Storage** - never lose your work
+
+### 🎨 Customization
+- **Custom Colors** - personalize each project
+- **Layout Options** - choose your preferred view
+- **Category System** - organize tasks your way
+- **Flexible Deadlines** - track time-sensitive tasks
 
 ## 🚀 Live Demo
 
-Visit: [Your GitHub Pages URL]
+**Try it now:** [https://YOUR-USERNAME.github.io/game-dev-task-manager](https://YOUR-USERNAME.github.io/game-dev-task-manager)
 
-## 🛠️ Technologies
+## 📥 Desktop App
 
-- **Frontend**: React, Tailwind CSS
-- **Backend**: Supabase (Authentication + Database)
-- **Hosting**: GitHub Pages
+Download the Windows desktop app from the [Releases](https://github.com/YOUR-USERNAME/game-dev-task-manager/releases) page.
 
-## 💻 Local Development
+## 🛠️ Tech Stack
 
-1. Clone the repository
-2. Open `index.html` in your browser
-3. That's it! No build process needed.
+- **Frontend:** HTML, CSS, JavaScript (React via Babel)
+- **Styling:** Tailwind CSS
+- **Backend:** Supabase (PostgreSQL + Authentication)
+- **Icons:** Lucide React
+- **Desktop:** Electron
+- **Hosting:** GitHub Pages
+
+## 📦 Installation
+
+### Web Version (Instant)
+Just visit the live demo link - no installation needed!
+
+### Desktop Version
+1. Download `Game Dev Task Manager Setup.exe` from [Releases](https://github.com/YOUR-USERNAME/game-dev-task-manager/releases)
+2. Run the installer
+3. Launch the app from your Start Menu or Desktop
+
+### Run Locally
+```bash
+# Clone the repository
+git clone https://github.com/YOUR-USERNAME/game-dev-task-manager.git
+
+# Navigate to the directory
+cd game-dev-task-manager
+
+# Open index.html in your browser
+# Or use a local server like:
+python -m http.server 8000
+# Then visit http://localhost:8000
+```
+
+### Build Desktop App
+```bash
+# Install dependencies
+npm install
+
+# Run in development
+npm start
+
+# Build for Windows
+npm run build
+```
 
 ## 🎮 How to Use
 
-1. **Sign Up** - Create an account with a unique username
-2. **Create Projects** - Start solo or group projects
-3. **Invite Members** - Type a username to invite collaborators
-4. **Collaborate** - Both owners and members can edit tasks
-5. **Customize** - Change colors, layouts, and themes per project
+### Getting Started
+1. **Sign Up** - Create an account with email and unique username
+2. **Verify Email** - Check your inbox for verification link
+3. **Login** - Access your dashboard
+4. **Create Project** - Start your first game project
 
-## 📝 License
+### Managing Tasks
+- **Add Task** - Click the "+" button
+- **Edit Task** - Click on any task to modify
+- **Add Subtasks** - Break down complex tasks
+- **Set Priority** - High, Medium, or Low
+- **Mark Complete** - Check off finished tasks
+- **Delete Task** - Remove tasks you no longer need
 
-MIT License - Feel free to use for personal or commercial projects!
+### Collaborating
+1. **Invite Members** - Click "Members" button → Enter username
+2. **Accept Invitations** - Check your dashboard for pending invites
+3. **Save Changes** - Use Ctrl+S or the Save button
+4. **Refresh View** - Use Ctrl+R or the Refresh button to see others' changes
+
+### Keyboard Shortcuts
+- `Ctrl+S` - Save current project
+- `Ctrl+R` - Refresh current project
+- `Shift+Click Refresh` - Full page reload
+
+## 🔐 Security
+
+- Row Level Security (RLS) policies on all database tables
+- Email verification required
+- Secure password hashing
+- Project-level access control
+- Owner-only member management
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome!
+Contributions are welcome! Feel free to:
+- Report bugs
+- Suggest new features
+- Submit pull requests
+- Improve documentation
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## 👨‍💻 Author
+
+Created by [@YOUR-USERNAME](https://github.com/YOUR-USERNAME)
+
+## 🙏 Acknowledgments
+
+- Built with [Supabase](https://supabase.com) for backend services
+- Icons by [Lucide](https://lucide.dev)
+- Styled with [Tailwind CSS](https://tailwindcss.com)
+- Desktop app powered by [Electron](https://www.electronjs.org)
+
+## 📞 Support
+
+If you encounter any issues or have questions:
+- Open an [Issue](https://github.com/YOUR-USERNAME/game-dev-task-manager/issues)
+- Check existing issues for solutions
+- Read the documentation above
 
 ---
 
-Made with ❤️ for game developers
+⭐ **Star this repo** if you find it useful!
+
+🎮 **Happy Game Development!** 🚀
