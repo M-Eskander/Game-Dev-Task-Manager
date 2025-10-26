@@ -34,9 +34,6 @@ A beautiful, feature-rich task management application designed specifically for 
 - **Category System** - organize tasks your way
 - **Flexible Deadlines** - track time-sensitive tasks
 
-## 🚀 Live Demo
-
-**Try it now:** [https://m-eskander.github.io/Game-Dev-Task-Manager](https://m-eskander.github.io/Game-Dev-Task-Manager)
 
 ## 📥 Desktop App
 
@@ -55,37 +52,12 @@ Download the Windows desktop app from the [Releases](https://github.com/M-Eskand
 
 ### Web Version (Instant)
 Just visit the live demo link - no installation needed!
+**Try it now:** [https://m-eskander.github.io/Game-Dev-Task-Manager](https://m-eskander.github.io/Game-Dev-Task-Manager)
 
 ### Desktop Version
 1. Download `Game Dev Task Manager Setup.exe` from [Releases](https://github.com/YOUR-USERNAME/game-dev-task-manager/releases)
 2. Run the installer
 3. Launch the app from your Start Menu or Desktop
-
-### Run Locally
-```bash
-# Clone the repository
-git clone https://github.com/M-Eskander/Game-Dev-Task-Manager.git
-
-# Navigate to the directory
-cd Game-Dev-Task-Manager
-
-# Open index.html in your browser
-# Or use a local server like:
-python -m http.server 8000
-# Then visit http://localhost:8000
-```
-
-### Build Desktop App
-```bash
-# Install dependencies
-npm install
-
-# Run in development
-npm start
-
-# Build for Windows
-npm run build
-```
 
 ## 🎮 How to Use
 
