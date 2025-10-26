@@ -1384,6 +1384,10 @@
                         await saveCurrentProject();
                     }
                     
+                    // Clear members modal state when switching projects
+                    setShowMembersModal(false);
+                    setProjectMembers([]);
+                    
                     // Load new project data
                     const newProject = projects.find(p => p.id === projectId);
                     console.log('Found project:', newProject);
