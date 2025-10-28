@@ -1,9 +1,20 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Keyboard shortcuts reference
+const SHORTCUTS = {
+  'Ctrl+K': 'Open search',
+  'Ctrl+S': 'Toggle statistics',
+  'Ctrl+R': 'Refresh project',
+  'N': 'New task (when focused)',
+  'X': 'Mark task complete',
+  'C': 'Add comment',
+  '/': 'Focus search',
+  'Esc': 'Close modals'
 }
 
 serve(async (req) => {
@@ -16,25 +27,59 @@ serve(async (req) => {
     
     console.log('Received request:', { message, action, hasContext: !!projectContext })
     
-    // Get Gemini API key from environment
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
     
     if (!GEMINI_API_KEY) {
       console.error('GEMINI_API_KEY not found in environment')
       throw new Error('Gemini API key not configured')
     }
-    
-    console.log('API key found, length:', GEMINI_API_KEY.length)
 
-    // Build prompt based on action
+    // Build comprehensive context
+    let contextInfo = ''
+    if (projectContext) {
+      contextInfo = `
+CURRENT PROJECT INFO:
+- Name: ${projectContext.projectName || 'Untitled'}
+- Total tasks: ${projectContext.taskCount || 0}
+- Completed: ${projectContext.completedTasks || 0}
+- In progress: ${(projectContext.taskCount || 0) - (projectContext.completedTasks || 0)}
+- Categories: Design, Art, Code, Audio, Other
+${projectContext.currentTasks ? `\nRECENT TASKS:\n${projectContext.currentTasks.slice(0, 5).map(t => `- ${t.title} (${t.category}) ${t.completed ? '✓' : '○'}`).join('\n')}` : ''}
+`
+    }
+
+    // Build prompt based on action and intent
     let prompt = ''
-    
+    let systemRole = `You are an expert AI assistant for a game development task manager app. You help users:
+1. Create and organize game dev projects
+2. Add/edit/complete tasks efficiently
+3. Learn keyboard shortcuts and features
+4. Troubleshoot issues
+5. Get productivity tips
+
+KEYBOARD SHORTCUTS YOU CAN TEACH:
+${Object.entries(SHORTCUTS).map(([key, desc]) => `- ${key}: ${desc}`).join('\n')}
+
+FEATURES AVAILABLE:
+- Task assignment (assign to team members)
+- Categories: Design, Art, Code, Audio, Other
+- Difficulty levels (1-5)
+- Importance/Priority (1-5)
+- Subtasks (nested tasks)
+- Task search and filtering
+- Statistics and progress tracking
+- Group projects with member management
+- Dark/Light mode
+- Export/Import data
+
+Be concise, friendly, and actionable. If asked to perform an action (like "mark task X complete" or "add a task"), acknowledge and explain that you'll help create it.`
+
     if (action === 'generate_project') {
-      prompt = `You are a game development project planner. Based on this description, create a detailed task breakdown.
+      prompt = `${systemRole}
 
-User request: "${message}"
+User wants to create a new project: "${message}"
 
-Generate a JSON response with this EXACT structure (valid JSON only, no markdown):
+Generate a comprehensive game development project plan. Return ONLY valid JSON (no markdown):
 {
   "projectName": "string",
   "description": "string",
@@ -45,7 +90,7 @@ Generate a JSON response with this EXACT structure (valid JSON only, no markdown
       "difficulty": 1-5,
       "importance": 1-5,
       "deadline": "",
-      "notes": "string",
+      "notes": "detailed helpful notes",
       "subtasks": [
         {
           "title": "string",
@@ -61,22 +106,20 @@ Generate a JSON response with this EXACT structure (valid JSON only, no markdown
 }
 
 Rules:
-- Create 5-15 main tasks
-- Each main task should have 2-5 subtasks
-- Use appropriate categories
-- Set realistic difficulty (1=easy, 5=hard) and importance (1=low, 5=critical)
-- Add helpful notes
-- Leave deadlines empty
-- Focus on game dev workflow: Design → Art → Code → Audio → Testing`
+- Create 6-12 main tasks covering full game dev lifecycle
+- Each main task: 2-5 subtasks
+- Logical workflow: Design → Art → Code → Audio → Polish → Testing
+- Realistic difficulty/importance
+- Helpful, actionable notes`
+      
     } else if (action === 'add_tasks') {
-      prompt = `You are helping a game developer add tasks to their existing project.
+      prompt = `${systemRole}
 
-Project: ${projectContext?.projectName || 'Current project'}
-Current tasks: ${projectContext?.taskCount || 0} tasks
+${contextInfo}
 
-User request: "${message}"
+User wants to add tasks: "${message}"
 
-Generate tasks to add. Return JSON with this structure (valid JSON only):
+Generate tasks to add to the current project. Return ONLY valid JSON:
 {
   "tasks": [
     {
@@ -91,15 +134,53 @@ Generate tasks to add. Return JSON with this structure (valid JSON only):
   ]
 }
 
-Create 1-5 tasks based on the request.`
-    } else if (action === 'chat') {
-      prompt = `You are a helpful AI assistant for a game development task manager.
+Create 1-5 tasks based on context.`
+      
+    } else {
+      // Smart chat mode - detect intent
+      const lowerMessage = message.toLowerCase()
+      
+      if (lowerMessage.includes('shortcut') || lowerMessage.includes('keyboard') || lowerMessage.includes('key')) {
+        prompt = `${systemRole}
 
-${projectContext ? `Current project: ${projectContext.projectName}` : 'User is on dashboard'}
+${contextInfo}
+
+User is asking about keyboard shortcuts: "${message}"
+
+List the relevant keyboard shortcuts from the list above and explain how to use them. Be specific and helpful.`
+        
+      } else if (lowerMessage.includes('how') || lowerMessage.includes('help') || lowerMessage.includes('issue') || lowerMessage.includes('problem') || lowerMessage.includes('error')) {
+        prompt = `${systemRole}
+
+${contextInfo}
+
+User needs help: "${message}"
+
+Provide step-by-step help. Reference keyboard shortcuts if relevant. Be specific about what buttons to click or actions to take.`
+        
+      } else if (lowerMessage.includes('task') && (lowerMessage.includes('complete') || lowerMessage.includes('done') || lowerMessage.includes('finish'))) {
+        prompt = `${systemRole}
+
+${contextInfo}
+
+User wants to complete tasks: "${message}"
+
+Explain how to mark tasks complete:
+1. Click the checkbox next to the task
+2. Or use 'X' keyboard shortcut when focused
+3. Subtasks complete automatically when parent is checked
+
+Be encouraging and mention their progress!`
+        
+      } else {
+        prompt = `${systemRole}
+
+${contextInfo}
 
 User: "${message}"
 
-Respond naturally and helpfully. If they ask about adding tasks, editing projects, or generating content, explain what you can do. Keep responses concise (2-3 sentences).`
+Respond naturally and helpfully. Suggest actions they can take, shortcuts they can use, or features that might help. Keep it conversational (2-4 sentences).`
+      }
     }
 
     // Call Gemini API
@@ -110,7 +191,11 @@ Respond naturally and helpfully. If they ask about adding tasks, editing project
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          }
         })
       }
     )
@@ -120,7 +205,7 @@ Respond naturally and helpfully. If they ask about adding tasks, editing project
     if (!response.ok) {
       const errorText = await response.text()
       console.error('Gemini API error:', errorText)
-      throw new Error(`Gemini API error: ${response.status} - ${errorText}`)
+      throw new Error(`Gemini API error: ${response.status}`)
     }
 
     const data = await response.json()
@@ -128,7 +213,7 @@ Respond naturally and helpfully. If they ask about adding tasks, editing project
 
     // Extract JSON if present
     let result
-    if (action !== 'chat') {
+    if (action === 'generate_project' || action === 'add_tasks') {
       let jsonText = generatedText
       if (generatedText.includes('```json')) {
         jsonText = generatedText.split('```json')[1].split('```')[0].trim()
@@ -145,9 +230,8 @@ Respond naturally and helpfully. If they ask about adding tasks, editing project
     })
   } catch (error) {
     console.error('Function error:', error)
-    console.error('Error details:', error.message, error.stack)
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: error.message || 'An error occurred',
       details: error.toString()
     }), {
       status: 500,
@@ -155,4 +239,3 @@ Respond naturally and helpfully. If they ask about adding tasks, editing project
     })
   }
 })
-

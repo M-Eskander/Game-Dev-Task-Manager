@@ -1585,11 +1585,19 @@
                         action = 'add_tasks';
                     }
                     
-                    // Get project context
+                    // Get comprehensive project context
                     const projectContext = currentProjectId ? {
                         projectName: projectName,
                         taskCount: tasks.length,
-                        projectId: currentProjectId
+                        completedTasks: tasks.filter(t => t.completed).length,
+                        projectId: currentProjectId,
+                        currentTasks: tasks.map(t => ({
+                            title: t.title,
+                            category: t.category,
+                            completed: t.completed,
+                            difficulty: t.difficulty,
+                            importance: t.importance
+                        }))
                     } : null;
                     
                     // Call Supabase Edge Function
@@ -3059,36 +3067,65 @@
                                 </div>
                                 
                                 {/* Chat Messages */}
-                                <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${globalDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                                <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${globalDarkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}>
                                     {aiMessages.length === 0 ? (
-                                        <div className={`text-center py-8 ${globalDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            <p className="text-sm mb-4">👋 Hi! I can help you with:</p>
-                                            <div className="space-y-2 text-xs">
-                                                <p>• "Create a project for a 2D platformer game"</p>
-                                                <p>• "Add tasks for character animations"</p>
-                                                <p>• "What should I work on next?"</p>
+                                        <div className="space-y-4">
+                                            <div className={`text-center py-4 ${globalDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                <div className="text-5xl mb-3 animate-bounce">🤖</div>
+                                                <h4 className="text-lg font-bold mb-2">Hey! I'm your AI Assistant</h4>
+                                                <p className="text-sm opacity-80 mb-4">I can help you build amazing games!</p>
+                                            </div>
+                                            
+                                            <div className={`space-y-2 ${globalDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">Try these:</p>
+                                                <button onClick={() => setAiInput("Create a project for a 2D platformer game")} className={`w-full p-3 rounded-xl text-left text-sm transition-all ${globalDarkMode ? 'bg-gray-800 hover:bg-gray-750 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'} hover:scale-[1.02]`}>
+                                                    💡 Create a project for a 2D platformer game
+                                                </button>
+                                                <button onClick={() => setAiInput("Add tasks for character animations")} className={`w-full p-3 rounded-xl text-left text-sm transition-all ${globalDarkMode ? 'bg-gray-800 hover:bg-gray-750 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'} hover:scale-[1.02]`}>
+                                                    ✨ Add tasks for character animations
+                                                </button>
+                                                <button onClick={() => setAiInput("What keyboard shortcuts are available?")} className={`w-full p-3 rounded-xl text-left text-sm transition-all ${globalDarkMode ? 'bg-gray-800 hover:bg-gray-750 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'} hover:scale-[1.02]`}>
+                                                    ⌨️ What keyboard shortcuts are available?
+                                                </button>
+                                                <button onClick={() => setAiInput("What should I work on next?")} className={`w-full p-3 rounded-xl text-left text-sm transition-all ${globalDarkMode ? 'bg-gray-800 hover:bg-gray-750 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'} hover:scale-[1.02]`}>
+                                                    🎯 What should I work on next?
+                                                </button>
                                             </div>
                                         </div>
                                     ) : (
                                         aiMessages.map((msg, i) => (
-                                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                                <div className={`max-w-[80%] p-3 rounded-lg ${
+                                            <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-scale-in`}>
+                                                {msg.role === 'assistant' && (
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-lg">🤖</span>
+                                                    </div>
+                                                )}
+                                                <div className={`max-w-[75%] p-3 rounded-2xl shadow-md ${
                                                     msg.role === 'user'
-                                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                                                        : globalDarkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'
+                                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-tr-none'
+                                                        : globalDarkMode ? 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-none' : 'bg-white text-gray-800 border border-gray-200 rounded-tl-none'
                                                 }`}>
-                                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                                                 </div>
+                                                {msg.role === 'user' && (
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-lg">👤</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))
                                     )}
                                     {aiGenerating && (
-                                        <div className="flex justify-start">
-                                            <div className={`p-3 rounded-lg ${globalDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                        <div className="flex gap-2 justify-start animate-scale-in">
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-lg">🤖</span>
+                                            </div>
+                                            <div className={`p-4 rounded-2xl shadow-md rounded-tl-none ${globalDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                                                     <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                                                     <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                    <span className={`text-xs ml-2 ${globalDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>AI is thinking...</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -3741,36 +3778,65 @@
                                 </div>
                                 
                                 {/* Chat Messages */}
-                                <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${(darkMode || globalDarkMode) ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                                <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${(darkMode || globalDarkMode) ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}>
                                     {aiMessages.length === 0 ? (
-                                        <div className={`text-center py-8 ${(darkMode || globalDarkMode) ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            <p className="text-sm mb-4">👋 Hi! I can help you with:</p>
-                                            <div className="space-y-2 text-xs">
-                                                <p>• "Create a project for a 2D platformer game"</p>
-                                                <p>• "Add tasks for character animations"</p>
-                                                <p>• "What should I work on next?"</p>
+                                        <div className="space-y-4">
+                                            <div className={`text-center py-4 ${(darkMode || globalDarkMode) ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                <div className="text-5xl mb-3 animate-bounce">🤖</div>
+                                                <h4 className="text-lg font-bold mb-2">Hey! I'm your AI Assistant</h4>
+                                                <p className="text-sm opacity-80 mb-4">I can help you build amazing games!</p>
+                                            </div>
+                                            
+                                            <div className={`space-y-2 ${(darkMode || globalDarkMode) ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">Try these:</p>
+                                                <button onClick={() => setAiInput("Create a project for a 2D platformer game")} className={`w-full p-3 rounded-xl text-left text-sm transition-all ${(darkMode || globalDarkMode) ? 'bg-gray-800 hover:bg-gray-750 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'} hover:scale-[1.02]`}>
+                                                    💡 Create a project for a 2D platformer game
+                                                </button>
+                                                <button onClick={() => setAiInput("Add tasks for character animations")} className={`w-full p-3 rounded-xl text-left text-sm transition-all ${(darkMode || globalDarkMode) ? 'bg-gray-800 hover:bg-gray-750 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'} hover:scale-[1.02]`}>
+                                                    ✨ Add tasks for character animations
+                                                </button>
+                                                <button onClick={() => setAiInput("What keyboard shortcuts are available?")} className={`w-full p-3 rounded-xl text-left text-sm transition-all ${(darkMode || globalDarkMode) ? 'bg-gray-800 hover:bg-gray-750 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'} hover:scale-[1.02]`}>
+                                                    ⌨️ What keyboard shortcuts are available?
+                                                </button>
+                                                <button onClick={() => setAiInput("What should I work on next?")} className={`w-full p-3 rounded-xl text-left text-sm transition-all ${(darkMode || globalDarkMode) ? 'bg-gray-800 hover:bg-gray-750 border border-gray-700' : 'bg-white hover:bg-gray-50 border border-gray-200'} hover:scale-[1.02]`}>
+                                                    🎯 What should I work on next?
+                                                </button>
                                             </div>
                                         </div>
                                     ) : (
                                         aiMessages.map((msg, i) => (
-                                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                                <div className={`max-w-[80%] p-3 rounded-lg ${
+                                            <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-scale-in`}>
+                                                {msg.role === 'assistant' && (
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-lg">🤖</span>
+                                                    </div>
+                                                )}
+                                                <div className={`max-w-[75%] p-3 rounded-2xl shadow-md ${
                                                     msg.role === 'user'
-                                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                                                        : (darkMode || globalDarkMode) ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'
+                                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-tr-none'
+                                                        : (darkMode || globalDarkMode) ? 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-none' : 'bg-white text-gray-800 border border-gray-200 rounded-tl-none'
                                                 }`}>
-                                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                                                 </div>
+                                                {msg.role === 'user' && (
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-lg">👤</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))
                                     )}
                                     {aiGenerating && (
-                                        <div className="flex justify-start">
-                                            <div className={`p-3 rounded-lg ${(darkMode || globalDarkMode) ? 'bg-gray-800' : 'bg-white'}`}>
+                                        <div className="flex gap-2 justify-start animate-scale-in">
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-lg">🤖</span>
+                                            </div>
+                                            <div className={`p-4 rounded-2xl shadow-md rounded-tl-none ${(darkMode || globalDarkMode) ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                                                     <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                                                     <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                    <span className={`text-xs ml-2 ${(darkMode || globalDarkMode) ? 'text-gray-400' : 'text-gray-500'}`}>AI is thinking...</span>
                                                 </div>
                                             </div>
                                         </div>
