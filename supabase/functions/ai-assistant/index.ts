@@ -99,15 +99,16 @@ DEADLINE CALCULATION (VERY IMPORTANT):
 - Format: "YYYY-MM-DD" (e.g., "2025-11-15")
 - NEVER leave deadline empty - always calculate a date
 
-YOU MUST FOLLOW THIS EXACT TEMPLATE - Generate EXACTLY 7 main tasks (one per line below):
+GENERATE AT LEAST 20 COMPREHENSIVE TASKS across all categories:
 
-Task 1: Category "Design" - About story/game design/mechanics
-Task 2: Category "Design" - About level design or GDD
-Task 3: Category "Art" - About character sprites/assets
-Task 4: Category "Art" - About environment/UI/animations
-Task 5: Category "Code" - About player mechanics/movement
-Task 6: Category "Code" - About UI/menus/save system
-Task 7: Category "Audio" - About music and sound effects
+Required Categories (5+ tasks each):
+- Design (5-8 tasks): GDD, story, mechanics, level design, UI/UX design
+- Art (5-8 tasks): Characters, environments, UI, VFX, animations
+- Code (5-8 tasks): Player systems, combat, AI, menus, save system
+- Audio (5-8 tasks): Music, SFX, ambient audio, mixing
+- Other (0-2 tasks): Optional testing/polish tasks
+
+Make tasks SPECIFIC to the user's description!
 
 JSON STRUCTURE (NO DEVIATIONS ALLOWED):
 {
@@ -165,14 +166,14 @@ JSON STRUCTURE (NO DEVIATIONS ALLOWED):
   ]
 }
 
-ABSOLUTE RULES (FAILURE TO FOLLOW = INVALID):
-1. Generate EXACTLY 7 main tasks
-2. Categories MUST be distributed: 2 Design, 2 Art, 2 Code, 1 Audio
-3. Each task is a SEPARATE object in tasks array
-4. Each task has 2-3 subtasks
-5. ALL deadlines must be filled (YYYY-MM-DD)
-6. Titles: simple, no quotes, no special characters
-7. Based on user description, customize task details but KEEP THE STRUCTURE`
+ABSOLUTE RULES:
+1. Generate 20-30 main tasks minimum
+2. Categories: 5+ Design, 5+ Art, 5+ Code, 5+ Audio tasks
+3. Each task has 2-4 subtasks with specific details
+4. ALL deadlines filled (YYYY-MM-DD, future dates only)
+5. Titles: simple, no quotes, no special characters
+6. Tasks SPECIFIC to user's game description
+7. Notes suggest tools, techniques, story ideas if needed`
       
     } else if (action === 'add_tasks') {
       prompt = `${systemRole}
@@ -373,113 +374,302 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
             return task
           })
           
-          // Add missing categories with default tasks
+          // Add missing categories with default tasks (5+ tasks per category)
           const missingTasks = []
+          const MIN_TASKS_PER_CATEGORY = 5
           
-          if (categoryCounts.Design < 2) {
-            const needed = 2 - categoryCounts.Design
-            if (needed >= 1) missingTasks.push({
-              title: "Game Design Document",
-              category: "Design",
-              difficulty: 3,
-              importance: 5,
-              deadline: formatDate(3),
-              notes: "Create comprehensive design document outlining core mechanics and gameplay",
-              subtasks: [
-                {title: "Define core mechanics", category: "Design", difficulty: 2, importance: 5, deadline: formatDate(1), notes: "Document movement, combat, and interaction systems"},
-                {title: "Write story outline", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(2), notes: "Main plot, characters, and world lore"}
-              ]
-            })
-            if (needed >= 2) missingTasks.push({
-              title: "Level Design",
-              category: "Design",
-              difficulty: 4,
-              importance: 4,
-              deadline: formatDate(7),
-              notes: "Plan level layouts and progression",
-              subtasks: [
-                {title: "Sketch level layouts", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(5), notes: "Paper prototypes of main levels"},
-                {title: "Define difficulty curve", category: "Design", difficulty: 3, importance: 4, deadline: formatDate(6), notes: "Balance progression and challenge"}
-              ]
-            })
+          if (categoryCounts.Design < MIN_TASKS_PER_CATEGORY) {
+            const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Design
+            const designTasks = [
+              {
+                title: "Game Design Document",
+                category: "Design",
+                difficulty: 3,
+                importance: 5,
+                deadline: formatDate(3),
+                notes: "Create comprehensive design document outlining core mechanics and gameplay",
+                subtasks: [
+                  {title: "Define core mechanics", category: "Design", difficulty: 2, importance: 5, deadline: formatDate(1), notes: "Document movement, combat, and interaction systems"},
+                  {title: "Write story outline", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(2), notes: "Main plot, characters, and world lore"}
+                ]
+              },
+              {
+                title: "Level Design",
+                category: "Design",
+                difficulty: 4,
+                importance: 4,
+                deadline: formatDate(7),
+                notes: "Plan level layouts and progression",
+                subtasks: [
+                  {title: "Sketch level layouts", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(5), notes: "Paper prototypes of main levels"},
+                  {title: "Define difficulty curve", category: "Design", difficulty: 3, importance: 4, deadline: formatDate(6), notes: "Balance progression and challenge"}
+                ]
+              },
+              {
+                title: "Character and Story Design",
+                category: "Design",
+                difficulty: 3,
+                importance: 5,
+                deadline: formatDate(10),
+                notes: "Design characters, backstories, and narrative arcs",
+                subtasks: [
+                  {title: "Main character design", category: "Design", difficulty: 2, importance: 5, deadline: formatDate(8), notes: "Personality, abilities, appearance"},
+                  {title: "NPC and enemy design", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(9), notes: "Supporting characters and antagonists"}
+                ]
+              },
+              {
+                title: "Game Mechanics Documentation",
+                category: "Design",
+                difficulty: 4,
+                importance: 5,
+                deadline: formatDate(14),
+                notes: "Document all gameplay systems and interactions",
+                subtasks: [
+                  {title: "Combat system design", category: "Design", difficulty: 3, importance: 5, deadline: formatDate(12), notes: "Attack, defense, combos"},
+                  {title: "Progression system", category: "Design", difficulty: 3, importance: 4, deadline: formatDate(13), notes: "Leveling, upgrades, unlocks"}
+                ]
+              },
+              {
+                title: "UI/UX Design",
+                category: "Design",
+                difficulty: 3,
+                importance: 4,
+                deadline: formatDate(18),
+                notes: "Design user interface and user experience flow",
+                subtasks: [
+                  {title: "Menu flow design", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(16), notes: "Main menu, pause, settings navigation"},
+                  {title: "HUD design", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(17), notes: "Health, score, inventory display"}
+                ]
+              }
+            ]
+            for (let i = 0; i < Math.min(needed, designTasks.length); i++) {
+              missingTasks.push(designTasks[i])
+            }
           }
           
-          if (categoryCounts.Art < 2) {
-            const needed = 2 - categoryCounts.Art
-            if (needed >= 1) missingTasks.push({
-              title: "Character Art",
-              category: "Art",
-              difficulty: 4,
-              importance: 5,
-              deadline: formatDate(10),
-              notes: "Create all character sprites and animations",
-              subtasks: [
-                {title: "Character concept art", category: "Art", difficulty: 2, importance: 5, deadline: formatDate(8), notes: "Design main character appearance"},
-                {title: "Sprite sheets", category: "Art", difficulty: 3, importance: 5, deadline: formatDate(9), notes: "Idle, walk, jump, attack animations"}
-              ]
-            })
-            if (needed >= 2) missingTasks.push({
-              title: "Environment and UI Art",
-              category: "Art",
-              difficulty: 4,
-              importance: 4,
-              deadline: formatDate(14),
-              notes: "Create background art and user interface elements",
-              subtasks: [
-                {title: "Background assets", category: "Art", difficulty: 3, importance: 4, deadline: formatDate(12), notes: "Tiles, props, and environment art"},
-                {title: "UI elements", category: "Art", difficulty: 2, importance: 4, deadline: formatDate(13), notes: "Buttons, menus, health bars, icons"}
-              ]
-            })
+          if (categoryCounts.Art < MIN_TASKS_PER_CATEGORY) {
+            const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Art
+            const artTasks = [
+              {
+                title: "Character Art",
+                category: "Art",
+                difficulty: 4,
+                importance: 5,
+                deadline: formatDate(22),
+                notes: "Create all character sprites and animations",
+                subtasks: [
+                  {title: "Character concept art", category: "Art", difficulty: 2, importance: 5, deadline: formatDate(20), notes: "Design main character appearance"},
+                  {title: "Sprite sheets", category: "Art", difficulty: 3, importance: 5, deadline: formatDate(21), notes: "Idle, walk, jump, attack animations"}
+                ]
+              },
+              {
+                title: "Environment and UI Art",
+                category: "Art",
+                difficulty: 4,
+                importance: 4,
+                deadline: formatDate(26),
+                notes: "Create background art and user interface elements",
+                subtasks: [
+                  {title: "Background assets", category: "Art", difficulty: 3, importance: 4, deadline: formatDate(24), notes: "Tiles, props, and environment art"},
+                  {title: "UI elements", category: "Art", difficulty: 2, importance: 4, deadline: formatDate(25), notes: "Buttons, menus, health bars, icons"}
+                ]
+              },
+              {
+                title: "Enemy and NPC Art",
+                category: "Art",
+                difficulty: 4,
+                importance: 4,
+                deadline: formatDate(30),
+                notes: "Create sprites for enemies and NPCs",
+                subtasks: [
+                  {title: "Enemy designs", category: "Art", difficulty: 3, importance: 4, deadline: formatDate(28), notes: "Concept art for all enemies"},
+                  {title: "NPC sprites", category: "Art", difficulty: 2, importance: 3, deadline: formatDate(29), notes: "Non-player character sprites"}
+                ]
+              },
+              {
+                title: "Visual Effects",
+                category: "Art",
+                difficulty: 3,
+                importance: 3,
+                deadline: formatDate(34),
+                notes: "Create particle effects and VFX",
+                subtasks: [
+                  {title: "Combat effects", category: "Art", difficulty: 2, importance: 3, deadline: formatDate(32), notes: "Hit, explosion, magic effects"},
+                  {title: "Environmental effects", category: "Art", difficulty: 2, importance: 3, deadline: formatDate(33), notes: "Weather, lighting, atmosphere"}
+                ]
+              },
+              {
+                title: "Animations and Polish",
+                category: "Art",
+                difficulty: 4,
+                importance: 4,
+                deadline: formatDate(38),
+                notes: "Polish all animations and visual elements",
+                subtasks: [
+                  {title: "Character animations", category: "Art", difficulty: 3, importance: 4, deadline: formatDate(36), notes: "Smooth transitions and movements"},
+                  {title: "UI animations", category: "Art", difficulty: 2, importance: 3, deadline: formatDate(37), notes: "Button hovers, menu transitions"}
+                ]
+              }
+            ]
+            for (let i = 0; i < Math.min(needed, artTasks.length); i++) {
+              missingTasks.push(artTasks[i])
+            }
           }
           
-          if (categoryCounts.Code < 2) {
-            const needed = 2 - categoryCounts.Code
-            if (needed >= 1) missingTasks.push({
-              title: "Core Gameplay Systems",
-              category: "Code",
-              difficulty: 5,
-              importance: 5,
-              deadline: formatDate(18),
-              notes: "Implement player movement and core mechanics",
-              subtasks: [
-                {title: "Player controller", category: "Code", difficulty: 3, importance: 5, deadline: formatDate(16), notes: "Movement, jumping, physics"},
-                {title: "Game mechanics", category: "Code", difficulty: 4, importance: 5, deadline: formatDate(17), notes: "Core gameplay systems and interactions"}
-              ]
-            })
-            if (needed >= 2) missingTasks.push({
-              title: "UI and Systems",
-              category: "Code",
-              difficulty: 4,
-              importance: 4,
-              deadline: formatDate(22),
-              notes: "Implement UI, menus, and save system",
-              subtasks: [
-                {title: "Menu system", category: "Code", difficulty: 3, importance: 4, deadline: formatDate(20), notes: "Main menu, pause, settings"},
-                {title: "Save/load system", category: "Code", difficulty: 3, importance: 4, deadline: formatDate(21), notes: "Progress saving and data persistence"}
-              ]
-            })
+          if (categoryCounts.Code < MIN_TASKS_PER_CATEGORY) {
+            const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Code
+            const codeTasks = [
+              {
+                title: "Core Gameplay Systems",
+                category: "Code",
+                difficulty: 5,
+                importance: 5,
+                deadline: formatDate(42),
+                notes: "Implement player movement and core mechanics",
+                subtasks: [
+                  {title: "Player controller", category: "Code", difficulty: 3, importance: 5, deadline: formatDate(40), notes: "Movement, jumping, physics"},
+                  {title: "Game mechanics", category: "Code", difficulty: 4, importance: 5, deadline: formatDate(41), notes: "Core gameplay systems and interactions"}
+                ]
+              },
+              {
+                title: "UI and Systems",
+                category: "Code",
+                difficulty: 4,
+                importance: 4,
+                deadline: formatDate(46),
+                notes: "Implement UI, menus, and save system",
+                subtasks: [
+                  {title: "Menu system", category: "Code", difficulty: 3, importance: 4, deadline: formatDate(44), notes: "Main menu, pause, settings"},
+                  {title: "Save/load system", category: "Code", difficulty: 3, importance: 4, deadline: formatDate(45), notes: "Progress saving and data persistence"}
+                ]
+              },
+              {
+                title: "Combat and Interaction Systems",
+                category: "Code",
+                difficulty: 5,
+                importance: 5,
+                deadline: formatDate(50),
+                notes: "Implement combat mechanics and object interactions",
+                subtasks: [
+                  {title: "Combat system", category: "Code", difficulty: 4, importance: 5, deadline: formatDate(48), notes: "Attack, defense, combos"},
+                  {title: "Interaction system", category: "Code", difficulty: 3, importance: 4, deadline: formatDate(49), notes: "Pickups, doors, triggers"}
+                ]
+              },
+              {
+                title: "AI and Enemy Systems",
+                category: "Code",
+                difficulty: 5,
+                importance: 4,
+                deadline: formatDate(54),
+                notes: "Implement enemy AI and behavior",
+                subtasks: [
+                  {title: "Enemy AI", category: "Code", difficulty: 4, importance: 4, deadline: formatDate(52), notes: "Pathfinding, decision making"},
+                  {title: "Boss battles", category: "Code", difficulty: 4, importance: 4, deadline: formatDate(53), notes: "Special boss mechanics and patterns"}
+                ]
+              },
+              {
+                title: "Game Systems and Polish",
+                category: "Code",
+                difficulty: 4,
+                importance: 4,
+                deadline: formatDate(58),
+                notes: "Implement progression, achievements, and polish",
+                subtasks: [
+                  {title: "Progression system", category: "Code", difficulty: 3, importance: 4, deadline: formatDate(56), notes: "Leveling, unlocks, upgrades"},
+                  {title: "Achievement system", category: "Code", difficulty: 2, importance: 3, deadline: formatDate(57), notes: "Track and reward player milestones"}
+                ]
+              }
+            ]
+            for (let i = 0; i < Math.min(needed, codeTasks.length); i++) {
+              missingTasks.push(codeTasks[i])
+            }
           }
           
-          if (categoryCounts.Audio < 1) {
-            missingTasks.push({
-              title: "Audio Integration",
-              category: "Audio",
-              difficulty: 3,
-              importance: 3,
-              deadline: formatDate(25),
-              notes: "Add music and sound effects",
-              subtasks: [
-                {title: "Background music", category: "Audio", difficulty: 2, importance: 3, deadline: formatDate(23), notes: "Compose or license BGM for different areas"},
-                {title: "Sound effects", category: "Audio", difficulty: 2, importance: 3, deadline: formatDate(24), notes: "Jump, hit, collect, UI sounds"}
-              ]
-            })
+          if (categoryCounts.Audio < MIN_TASKS_PER_CATEGORY) {
+            const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Audio
+            const audioTasks = [
+              {
+                title: "Background Music",
+                category: "Audio",
+                difficulty: 3,
+                importance: 4,
+                deadline: formatDate(62),
+                notes: "Compose or source background music for all areas",
+                subtasks: [
+                  {title: "Main theme", category: "Audio", difficulty: 3, importance: 4, deadline: formatDate(60), notes: "Title screen and main menu music"},
+                  {title: "Level music", category: "Audio", difficulty: 3, importance: 4, deadline: formatDate(61), notes: "Music for different game areas"}
+                ]
+              },
+              {
+                title: "Sound Effects",
+                category: "Audio",
+                difficulty: 3,
+                importance: 4,
+                deadline: formatDate(66),
+                notes: "Create or source all sound effects",
+                subtasks: [
+                  {title: "Player SFX", category: "Audio", difficulty: 2, importance: 4, deadline: formatDate(64), notes: "Jump, land, hurt, collect sounds"},
+                  {title: "Enemy SFX", category: "Audio", difficulty: 2, importance: 3, deadline: formatDate(65), notes: "Enemy attack, hurt, death sounds"}
+                ]
+              },
+              {
+                title: "Combat Audio",
+                category: "Audio",
+                difficulty: 3,
+                importance: 4,
+                deadline: formatDate(70),
+                notes: "Add combat and action sound effects",
+                subtasks: [
+                  {title: "Weapon sounds", category: "Audio", difficulty: 2, importance: 4, deadline: formatDate(68), notes: "Swing, hit, special attack sounds"},
+                  {title: "Impact sounds", category: "Audio", difficulty: 2, importance: 3, deadline: formatDate(69), notes: "Hit reactions, explosions, destruction"}
+                ]
+              },
+              {
+                title: "Ambient Audio",
+                category: "Audio",
+                difficulty: 2,
+                importance: 3,
+                deadline: formatDate(74),
+                notes: "Add environmental and ambient sounds",
+                subtasks: [
+                  {title: "Environment ambience", category: "Audio", difficulty: 2, importance: 3, deadline: formatDate(72), notes: "Wind, water, forest sounds"},
+                  {title: "UI sounds", category: "Audio", difficulty: 1, importance: 3, deadline: formatDate(73), notes: "Button clicks, menu navigation"}
+                ]
+              },
+              {
+                title: "Audio Polish and Mixing",
+                category: "Audio",
+                difficulty: 4,
+                importance: 4,
+                deadline: formatDate(78),
+                notes: "Mix and polish all audio, add music transitions",
+                subtasks: [
+                  {title: "Audio mixing", category: "Audio", difficulty: 3, importance: 4, deadline: formatDate(76), notes: "Balance music, SFX, and dialogue levels"},
+                  {title: "Dynamic music", category: "Audio", difficulty: 3, importance: 3, deadline: formatDate(77), notes: "Music transitions based on gameplay"}
+                ]
+              }
+            ]
+            for (let i = 0; i < Math.min(needed, audioTasks.length); i++) {
+              missingTasks.push(audioTasks[i])
+            }
           }
           
           // Add missing tasks to the result
           if (missingTasks.length > 0) {
             console.log(`Adding ${missingTasks.length} missing tasks to ensure all categories are covered`)
+            console.log('Missing task categories:', missingTasks.map(t => t.category).join(', '))
             result.tasks = [...result.tasks, ...missingTasks]
           }
+          
+          // Final validation - count again
+          const finalCounts = { Design: 0, Art: 0, Code: 0, Audio: 0, Other: 0 }
+          result.tasks.forEach(task => {
+            if (finalCounts[task.category] !== undefined) {
+              finalCounts[task.category]++
+            }
+          })
+          console.log('Final category counts after adding missing tasks:', finalCounts)
+          console.log('Total tasks:', result.tasks.length)
         }
         
       } catch (parseError) {

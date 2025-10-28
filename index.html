@@ -1520,6 +1520,10 @@
                         if (aiError) throw aiError;
                         
                         if (aiData && aiData.tasks) {
+                            console.log('✅ AI Response received:', aiData);
+                            console.log('📊 Total tasks from AI:', aiData.tasks.length);
+                            console.log('📋 Categories:', aiData.tasks.map(t => t.category).join(', '));
+                            
                             // Process AI generated tasks
                             tasksToAdd = aiData.tasks.map(task => ({
                                 ...task,
@@ -1536,6 +1540,8 @@
                                     subtasks: []
                                 })) : []
                             }));
+                            
+                            console.log('✅ Processed tasks to add:', tasksToAdd.length);
                         }
                     } catch (error) {
                         console.error('AI Generation Error:', error);
