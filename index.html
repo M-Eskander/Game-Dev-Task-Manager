@@ -1325,8 +1325,18 @@
             };
 
             const getFilteredTasks = () => {
-                if (selectedCategory === 'All') return tasks;
-                return tasks.filter(task => task.category === selectedCategory);
+                console.log('🔍 Selected Category:', selectedCategory);
+                console.log('📋 Total tasks:', tasks.length);
+                console.log('📊 Task categories:', tasks.map(t => t.category).join(', '));
+                
+                if (selectedCategory === 'All') {
+                    console.log('✅ Showing ALL tasks');
+                    return tasks;
+                }
+                
+                const filtered = tasks.filter(task => task.category === selectedCategory);
+                console.log(`✅ Filtered to ${selectedCategory}:`, filtered.length, 'tasks');
+                return filtered;
             };
 
             const getSortedTasks = () => {
