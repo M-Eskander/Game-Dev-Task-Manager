@@ -79,7 +79,7 @@ Be concise, friendly, and actionable. If asked to perform an action (like "mark 
 
 User wants to create a new project: "${message}"
 
-Generate a comprehensive game development project plan. Return ONLY valid JSON (no markdown):
+Generate a comprehensive game development project plan. Return ONLY valid JSON with NO markdown, NO code blocks, NO extra text. CRITICAL: Escape all quotes in strings, avoid line breaks in strings. Return pure JSON only:
 {
   "projectName": "string",
   "description": "string",
@@ -119,7 +119,7 @@ ${contextInfo}
 
 User wants to add tasks: "${message}"
 
-Generate tasks to add to the current project. Return ONLY valid JSON:
+Generate tasks to add to the current project. Return ONLY valid JSON with NO markdown, NO code blocks. CRITICAL: Escape all quotes in strings, keep strings simple. Return pure JSON only:
 {
   "tasks": [
     {
@@ -215,12 +215,25 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
     let result
     if (action === 'generate_project' || action === 'add_tasks') {
       let jsonText = generatedText
+      
+      // Extract from markdown code blocks
       if (generatedText.includes('```json')) {
         jsonText = generatedText.split('```json')[1].split('```')[0].trim()
       } else if (generatedText.includes('```')) {
         jsonText = generatedText.split('```')[1].split('```')[0].trim()
       }
-      result = JSON.parse(jsonText)
+      
+      // Clean up common JSON issues
+      // Remove any trailing commas before } or ]
+      jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1')
+      
+      try {
+        result = JSON.parse(jsonText)
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError)
+        console.error('Failed JSON text:', jsonText.substring(0, 500))
+        throw new Error('AI generated invalid JSON. Please try again with a simpler request.')
+      }
     } else {
       result = { response: generatedText }
     }
