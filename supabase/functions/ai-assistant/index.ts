@@ -313,6 +313,175 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
       
       try {
         result = JSON.parse(jsonText)
+        
+        // FORCE ALL CATEGORIES for generate_project action
+        if (action === 'generate_project' && result.tasks) {
+          console.log('Validating task categories...')
+          
+          // Count existing categories
+          const categoryCounts = {
+            'Design': 0,
+            'Art': 0,
+            'Code': 0,
+            'Audio': 0,
+            'Other': 0
+          }
+          
+          result.tasks.forEach(task => {
+            if (categoryCounts[task.category] !== undefined) {
+              categoryCounts[task.category]++
+            }
+          })
+          
+          console.log('Category counts:', categoryCounts)
+          
+          // Get today's date for deadline calculations (ensure future dates)
+          const today = new Date()
+          console.log('Today is:', today.toISOString().split('T')[0])
+          
+          const formatDate = (daysFromNow) => {
+            const d = new Date(today)
+            d.setDate(d.getDate() + daysFromNow)
+            return d.toISOString().split('T')[0]
+          }
+          
+          // Also fix any existing tasks with past deadlines
+          result.tasks = result.tasks.map((task, index) => {
+            // Check if deadline is in the past
+            const taskDeadline = new Date(task.deadline)
+            if (isNaN(taskDeadline.getTime()) || taskDeadline < today) {
+              console.log(`Fixing past deadline for task: ${task.title}`)
+              task.deadline = formatDate(3 + (index * 3)) // Spread tasks over time
+            }
+            
+            // Fix subtask deadlines
+            if (task.subtasks) {
+              task.subtasks = task.subtasks.map((subtask, subIndex) => {
+                const subtaskDeadline = new Date(subtask.deadline)
+                const parentDeadline = new Date(task.deadline)
+                
+                // If subtask deadline is invalid or after parent, fix it
+                if (isNaN(subtaskDeadline.getTime()) || subtaskDeadline >= parentDeadline || subtaskDeadline < today) {
+                  const daysBeforeParent = Math.max(1, Math.floor((parentDeadline - today) / (1000 * 60 * 60 * 24)) - (task.subtasks.length - subIndex))
+                  subtask.deadline = formatDate(Math.max(1, daysBeforeParent))
+                }
+                
+                return subtask
+              })
+            }
+            
+            return task
+          })
+          
+          // Add missing categories with default tasks
+          const missingTasks = []
+          
+          if (categoryCounts.Design < 2) {
+            const needed = 2 - categoryCounts.Design
+            if (needed >= 1) missingTasks.push({
+              title: "Game Design Document",
+              category: "Design",
+              difficulty: 3,
+              importance: 5,
+              deadline: formatDate(3),
+              notes: "Create comprehensive design document outlining core mechanics and gameplay",
+              subtasks: [
+                {title: "Define core mechanics", category: "Design", difficulty: 2, importance: 5, deadline: formatDate(1), notes: "Document movement, combat, and interaction systems"},
+                {title: "Write story outline", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(2), notes: "Main plot, characters, and world lore"}
+              ]
+            })
+            if (needed >= 2) missingTasks.push({
+              title: "Level Design",
+              category: "Design",
+              difficulty: 4,
+              importance: 4,
+              deadline: formatDate(7),
+              notes: "Plan level layouts and progression",
+              subtasks: [
+                {title: "Sketch level layouts", category: "Design", difficulty: 2, importance: 4, deadline: formatDate(5), notes: "Paper prototypes of main levels"},
+                {title: "Define difficulty curve", category: "Design", difficulty: 3, importance: 4, deadline: formatDate(6), notes: "Balance progression and challenge"}
+              ]
+            })
+          }
+          
+          if (categoryCounts.Art < 2) {
+            const needed = 2 - categoryCounts.Art
+            if (needed >= 1) missingTasks.push({
+              title: "Character Art",
+              category: "Art",
+              difficulty: 4,
+              importance: 5,
+              deadline: formatDate(10),
+              notes: "Create all character sprites and animations",
+              subtasks: [
+                {title: "Character concept art", category: "Art", difficulty: 2, importance: 5, deadline: formatDate(8), notes: "Design main character appearance"},
+                {title: "Sprite sheets", category: "Art", difficulty: 3, importance: 5, deadline: formatDate(9), notes: "Idle, walk, jump, attack animations"}
+              ]
+            })
+            if (needed >= 2) missingTasks.push({
+              title: "Environment and UI Art",
+              category: "Art",
+              difficulty: 4,
+              importance: 4,
+              deadline: formatDate(14),
+              notes: "Create background art and user interface elements",
+              subtasks: [
+                {title: "Background assets", category: "Art", difficulty: 3, importance: 4, deadline: formatDate(12), notes: "Tiles, props, and environment art"},
+                {title: "UI elements", category: "Art", difficulty: 2, importance: 4, deadline: formatDate(13), notes: "Buttons, menus, health bars, icons"}
+              ]
+            })
+          }
+          
+          if (categoryCounts.Code < 2) {
+            const needed = 2 - categoryCounts.Code
+            if (needed >= 1) missingTasks.push({
+              title: "Core Gameplay Systems",
+              category: "Code",
+              difficulty: 5,
+              importance: 5,
+              deadline: formatDate(18),
+              notes: "Implement player movement and core mechanics",
+              subtasks: [
+                {title: "Player controller", category: "Code", difficulty: 3, importance: 5, deadline: formatDate(16), notes: "Movement, jumping, physics"},
+                {title: "Game mechanics", category: "Code", difficulty: 4, importance: 5, deadline: formatDate(17), notes: "Core gameplay systems and interactions"}
+              ]
+            })
+            if (needed >= 2) missingTasks.push({
+              title: "UI and Systems",
+              category: "Code",
+              difficulty: 4,
+              importance: 4,
+              deadline: formatDate(22),
+              notes: "Implement UI, menus, and save system",
+              subtasks: [
+                {title: "Menu system", category: "Code", difficulty: 3, importance: 4, deadline: formatDate(20), notes: "Main menu, pause, settings"},
+                {title: "Save/load system", category: "Code", difficulty: 3, importance: 4, deadline: formatDate(21), notes: "Progress saving and data persistence"}
+              ]
+            })
+          }
+          
+          if (categoryCounts.Audio < 1) {
+            missingTasks.push({
+              title: "Audio Integration",
+              category: "Audio",
+              difficulty: 3,
+              importance: 3,
+              deadline: formatDate(25),
+              notes: "Add music and sound effects",
+              subtasks: [
+                {title: "Background music", category: "Audio", difficulty: 2, importance: 3, deadline: formatDate(23), notes: "Compose or license BGM for different areas"},
+                {title: "Sound effects", category: "Audio", difficulty: 2, importance: 3, deadline: formatDate(24), notes: "Jump, hit, collect, UI sounds"}
+              ]
+            })
+          }
+          
+          // Add missing tasks to the result
+          if (missingTasks.length > 0) {
+            console.log(`Adding ${missingTasks.length} missing tasks to ensure all categories are covered`)
+            result.tasks = [...result.tasks, ...missingTasks]
+          }
+        }
+        
       } catch (parseError) {
         console.error('JSON parse error:', parseError)
         console.error('Failed JSON text:', jsonText.substring(0, 500))
