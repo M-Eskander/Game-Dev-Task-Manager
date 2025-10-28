@@ -656,11 +656,27 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
             }
           }
           
-          // Add missing tasks to the result
+          // Add missing tasks to the result (avoid duplicates)
           if (missingTasks.length > 0) {
             console.log(`Adding ${missingTasks.length} missing tasks to ensure all categories are covered`)
             console.log('Missing task categories:', missingTasks.map(t => t.category).join(', '))
-            result.tasks = [...result.tasks, ...missingTasks]
+            
+            // Get existing task titles (normalized for comparison)
+            const existingTitles = result.tasks.map(t => t.title.toLowerCase().trim())
+            
+            // Only add tasks that don't have similar titles already
+            const uniqueMissingTasks = missingTasks.filter(task => {
+              const normalizedTitle = task.title.toLowerCase().trim()
+              // Check if any existing title contains the key words or vice versa
+              const isDuplicate = existingTitles.some(existingTitle => {
+                return existingTitle.includes(normalizedTitle.split(' ')[0]) || 
+                       normalizedTitle.includes(existingTitle.split(' ')[0])
+              })
+              return !isDuplicate
+            })
+            
+            console.log(`Filtered to ${uniqueMissingTasks.length} unique tasks (removed ${missingTasks.length - uniqueMissingTasks.length} duplicates)`)
+            result.tasks = [...result.tasks, ...uniqueMissingTasks]
           }
           
           // Final validation - count again
