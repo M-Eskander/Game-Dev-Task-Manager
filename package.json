@@ -1,12 +1,17 @@
 {
   "name": "game-dev-task-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Game Dev Task Manager - Desktop App",
   "main": "electron.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/M-Eskander/Game-Dev-Task-Manager.git"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win --x64",
-    "build-all": "electron-builder -mwl"
+    "build-all": "electron-builder -mwl",
+    "publish": "electron-builder --win --x64 --publish always"
   },
   "keywords": [
     "task-manager",
@@ -15,6 +20,9 @@
   ],
   "author": "M-Eskander",
   "license": "MIT",
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  },
   "devDependencies": {
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"
@@ -32,13 +40,20 @@
     "win": {
       "target": "nsis",
       "sign": null,
-      "verifyUpdateCodeSignature": false
+      "verifyUpdateCodeSignature": false,
+      "publisherName": "M-Eskander"
     },
     "mac": {
       "target": "dmg"
     },
     "linux": {
       "target": "AppImage"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "M-Eskander",
+      "repo": "Game-Dev-Task-Manager",
+      "releaseType": "release"
     }
   }
 }

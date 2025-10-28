@@ -1,7 +1,12 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 
 let mainWindow;
+
+// Configure auto-updater
+autoUpdater.autoDownload = false; // Ask user before downloading
+autoUpdater.autoInstallOnAppQuit = true;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -79,14 +84,27 @@ function createWindow() {
             label: 'Help',
             submenu: [
                 {
+                    label: 'Check for Updates',
+                    click: () => {
+                        autoUpdater.checkForUpdates();
+                        dialog.showMessageBox(mainWindow, {
+                            type: 'info',
+                            title: 'Checking for Updates',
+                            message: 'Checking for updates...',
+                            detail: 'You will be notified if a new version is available.',
+                            buttons: ['OK']
+                        });
+                    }
+                },
+                { type: 'separator' },
+                {
                     label: 'About',
                     click: () => {
-                        const { dialog } = require('electron');
                         dialog.showMessageBox(mainWindow, {
                             type: 'info',
                             title: 'About Game Dev Task Manager',
-                            message: 'Game Dev Task Manager v1.0.0',
-                            detail: 'A beautiful task management app for game developers.\n\nMade with ❤️ using Electron and Supabase.',
+                            message: 'Game Dev Task Manager v1.0.1',
+                            detail: 'A beautiful task management app for game developers.\n\nMade with ❤️ using Electron and Supabase.\n\nAuto-updates enabled!',
                             buttons: ['OK']
                         });
                     }
@@ -106,9 +124,62 @@ function createWindow() {
     Menu.setApplicationMenu(menu);
 }
 
+// Auto-updater event handlers
+autoUpdater.on('update-available', (info) => {
+    dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Available',
+        message: `A new version (${info.version}) is available!`,
+        detail: 'Would you like to download it now? The update will install when you close the app.',
+        buttons: ['Download', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+    }).then((result) => {
+        if (result.response === 0) {
+            autoUpdater.downloadUpdate();
+        }
+    });
+});
+
+autoUpdater.on('update-not-available', () => {
+    console.log('App is up to date');
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+    let message = `Downloading update: ${Math.round(progressObj.percent)}%`;
+    console.log(message);
+    mainWindow.setTitle(`Game Dev Task Manager - ${message}`);
+});
+
+autoUpdater.on('update-downloaded', () => {
+    mainWindow.setTitle('Game Dev Task Manager');
+    dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: 'Update downloaded successfully!',
+        detail: 'The update will be installed when you close the app.',
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+    }).then((result) => {
+        if (result.response === 0) {
+            autoUpdater.quitAndInstall();
+        }
+    });
+});
+
+autoUpdater.on('error', (err) => {
+    console.error('Update error:', err);
+});
+
 // Create window when app is ready
 app.whenReady().then(() => {
     createWindow();
+
+    // Check for updates after 3 seconds (give app time to fully load)
+    setTimeout(() => {
+        autoUpdater.checkForUpdates();
+    }, 3000);
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
