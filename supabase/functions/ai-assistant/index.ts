@@ -106,11 +106,12 @@ Generate a comprehensive game development project plan. Return ONLY valid JSON w
 }
 
 Rules:
-- Create 6-12 main tasks covering full game dev lifecycle
-- Each main task: 2-5 subtasks
-- Logical workflow: Design → Art → Code → Audio → Polish → Testing
+- Create 4-6 main tasks ONLY (keep it concise to avoid token limits)
+- Each main task: 2-3 subtasks maximum
+- Logical workflow: Design → Art → Code → Audio → Testing
 - Realistic difficulty/importance
-- Helpful, actionable notes`
+- Keep notes SHORT (one sentence max)
+- Simple titles without special characters or quotes`
       
     } else if (action === 'add_tasks') {
       prompt = `${systemRole}
@@ -194,7 +195,7 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
           }
         })
       }

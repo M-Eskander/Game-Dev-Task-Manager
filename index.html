@@ -781,6 +781,9 @@
             const [showProjectSelector, setShowProjectSelector] = useState(false);
             const [showNewProjectInput, setShowNewProjectInput] = useState(false);
             const [newProjectName, setNewProjectName] = useState('');
+            const [newProjectUseAI, setNewProjectUseAI] = useState(false);
+            const [newProjectDescription, setNewProjectDescription] = useState('');
+            const [newProjectDeadline, setNewProjectDeadline] = useState('');
             const [hasLoaded, setHasLoaded] = useState(false);
             const [showStartPage, setShowStartPage] = useState(true);
             const [isTransitioning, setIsTransitioning] = useState(false);
@@ -1494,11 +1497,57 @@
             const createNewProject = async () => {
                 if (!newProjectName.trim()) return;
                 
+                let tasksToAdd = [];
+                
+                // If "Create with AI" is enabled, generate tasks
+                if (newProjectUseAI) {
+                    if (!newProjectDescription.trim()) {
+                        showToast('Please add a description for AI to generate tasks!', 'warning');
+                        return;
+                    }
+                    
+                    showToast('🤖 AI is generating your project...', 'info');
+                    
+                    try {
+                        const { data: aiData, error: aiError } = await supabaseClient.functions.invoke('ai-assistant', {
+                            body: {
+                                message: `Create a ${newProjectName}: ${newProjectDescription}`,
+                                projectContext: null,
+                                action: 'generate_project'
+                            }
+                        });
+                        
+                        if (aiError) throw aiError;
+                        
+                        if (aiData && aiData.tasks) {
+                            // Process AI generated tasks
+                            tasksToAdd = aiData.tasks.map(task => ({
+                                ...task,
+                                id: Date.now().toString() + Math.random(),
+                                completed: false,
+                                assigned_to: null,
+                                comments: [],
+                                subtasks: task.subtasks ? task.subtasks.map(st => ({
+                                    ...st,
+                                    id: Date.now().toString() + Math.random(),
+                                    completed: false,
+                                    assigned_to: null,
+                                    comments: [],
+                                    subtasks: []
+                                })) : []
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('AI Generation Error:', error);
+                        showToast('AI generation failed. Creating empty project instead.', 'warning');
+                    }
+                }
+                
                 const newProject = {
                     name: newProjectName,
-                    description: '',
-                    deadline: '',
-                    tasks: [],
+                    description: newProjectDescription || '',
+                    deadline: newProjectDeadline || '',
+                    tasks: tasksToAdd,
                     primary_color: '#9333ea',
                     secondary_color: '#ec4899',
                     dark_mode: globalDarkMode,
@@ -1522,9 +1571,12 @@
                 if (data) {
                     setProjects([...projects, data]);
                     setNewProjectName('');
+                    setNewProjectDescription('');
+                    setNewProjectDeadline('');
+                    setNewProjectUseAI(false);
                     setShowNewProjectInput(false);
                     switchProject(data.id);
-                    showToast('Project created successfully!', 'success');
+                    showToast(newProjectUseAI ? '🎉 AI-powered project created!' : 'Project created successfully!', 'success');
                 }
             };
 
@@ -2540,22 +2592,65 @@
                                 
                                 {showNewProjectInput && (
                                     <div className={`mb-8 p-6 rounded-xl ${globalDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                                        <div className="flex gap-3">
+                                        <div className="space-y-4">
+                                            {/* Project Name */}
                                             <input 
                                                 type="text" 
                                                 value={newProjectName} 
                                                 onChange={(e) => setNewProjectName(e.target.value)} 
-                                                onKeyPress={(e) => e.key === 'Enter' && createNewProject()} 
-                                                className={`flex-1 px-4 py-3 border-2 rounded-xl text-lg font-semibold ${globalDarkMode ? 'bg-gray-600 text-white border-gray-500' : 'bg-white border-gray-300'}`} 
+                                                onKeyPress={(e) => e.key === 'Enter' && !newProjectUseAI && createNewProject()} 
+                                                className={`w-full px-4 py-3 border-2 rounded-xl text-lg font-semibold ${globalDarkMode ? 'bg-gray-600 text-white border-gray-500' : 'bg-white border-gray-300'}`} 
                                                 placeholder="Project name" 
                                                 autoFocus 
                                             />
-                                            <button onClick={createNewProject} className="px-6 py-3 text-white rounded-xl font-semibold" style={{ background: `linear-gradient(135deg, #9333ea, #ec4899)` }}>
-                                                Create
-                                            </button>
-                                            <button onClick={() => {setShowNewProjectInput(false); setNewProjectName('');}} className={`px-6 py-3 rounded-xl font-semibold ${globalDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-200'}`}>
-                                                Cancel
-                                            </button>
+                                            
+                                            {/* AI Toggle */}
+                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={newProjectUseAI} 
+                                                    onChange={(e) => setNewProjectUseAI(e.target.checked)} 
+                                                    className="w-5 h-5 rounded cursor-pointer accent-purple-600"
+                                                />
+                                                <div>
+                                                    <span className={`font-semibold ${globalDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                                                        🤖 Create with AI
+                                                    </span>
+                                                    <p className={`text-xs ${globalDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                        AI will generate tasks based on your description
+                                                    </p>
+                                                </div>
+                                            </label>
+                                            
+                                            {/* Show description and deadline if AI is enabled */}
+                                            {newProjectUseAI && (
+                                                <div className="space-y-3 animate-scale-in">
+                                                    <textarea 
+                                                        value={newProjectDescription} 
+                                                        onChange={(e) => setNewProjectDescription(e.target.value)} 
+                                                        className={`w-full px-4 py-3 border-2 rounded-xl resize-none ${globalDarkMode ? 'bg-gray-600 text-white border-gray-500 placeholder-gray-400' : 'bg-white border-gray-300'}`} 
+                                                        placeholder="Describe your game project (e.g., 'A 2D platformer where a ninja cat collects batteries...')"
+                                                        rows="3"
+                                                    />
+                                                    <input 
+                                                        type="date" 
+                                                        value={newProjectDeadline} 
+                                                        onChange={(e) => setNewProjectDeadline(e.target.value)} 
+                                                        className={`w-full px-4 py-3 border-2 rounded-xl ${globalDarkMode ? 'bg-gray-600 text-white border-gray-500' : 'bg-white border-gray-300'}`}
+                                                        placeholder="Project deadline (optional)"
+                                                    />
+                                                </div>
+                                            )}
+                                            
+                                            {/* Buttons */}
+                                            <div className="flex gap-3">
+                                                <button onClick={createNewProject} className="flex-1 px-6 py-3 text-white rounded-xl font-semibold flex items-center justify-center gap-2" style={{ background: `linear-gradient(135deg, #9333ea, #ec4899)` }}>
+                                                    {newProjectUseAI ? <><span className="text-xl">🤖</span> Create with AI</> : 'Create'}
+                                                </button>
+                                                <button onClick={() => {setShowNewProjectInput(false); setNewProjectName(''); setNewProjectDescription(''); setNewProjectDeadline(''); setNewProjectUseAI(false);}} className={`px-6 py-3 rounded-xl font-semibold ${globalDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-200'}`}>
+                                                    Cancel
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
