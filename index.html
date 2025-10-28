@@ -1579,9 +1579,16 @@
                     let action = 'chat';
                     const lowerMessage = userMessage.toLowerCase();
                     
-                    if (lowerMessage.includes('create project') || lowerMessage.includes('generate project') || lowerMessage.includes('new project')) {
+                    // Check for project creation (more keywords)
+                    if ((lowerMessage.includes('create') || lowerMessage.includes('generate') || lowerMessage.includes('make') || lowerMessage.includes('build')) && 
+                        (lowerMessage.includes('project') || lowerMessage.includes('game')) && 
+                        !currentProjectId) {
                         action = 'generate_project';
-                    } else if (lowerMessage.includes('add task') || lowerMessage.includes('create task') || lowerMessage.includes('new task')) {
+                    } 
+                    // Check for adding tasks (only when in a project)
+                    else if (currentProjectId && 
+                             (lowerMessage.includes('add') || lowerMessage.includes('create') || lowerMessage.includes('generate')) && 
+                             (lowerMessage.includes('task') || lowerMessage.includes('todo'))) {
                         action = 'add_tasks';
                     }
                     
@@ -1673,9 +1680,18 @@
                     }
                 } catch (error) {
                     console.error('AI Error:', error);
+                    
+                    // Check if it's a 503 overload error
+                    let errorMessage = '❌ Sorry, I encountered an error. Please try again!';
+                    if (error.message && error.message.includes('503')) {
+                        errorMessage = '⏳ Google AI is currently overloaded. Please wait 30 seconds and try again!';
+                    } else if (error.message && error.message.includes('overloaded')) {
+                        errorMessage = '⏳ Google AI is currently overloaded. Please wait 30 seconds and try again!';
+                    }
+                    
                     setAiMessages([...newMessages, {
                         role: 'assistant',
-                        content: '❌ Sorry, I encountered an error. Please try again!'
+                        content: errorMessage
                     }]);
                 } finally {
                     setAiGenerating(false);
