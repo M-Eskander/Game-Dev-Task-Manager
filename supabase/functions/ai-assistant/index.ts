@@ -23,9 +23,9 @@ serve(async (req) => {
   }
 
   try {
-    const { message, projectContext, action } = await req.json()
+    const { message, projectContext, action, conversationHistory = [] } = await req.json()
     
-    console.log('Received request:', { message, action, hasContext: !!projectContext })
+    console.log('Received request:', { message, action, hasContext: !!projectContext, historyLength: conversationHistory.length })
     
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
     
@@ -226,6 +226,30 @@ Return ONLY valid JSON with NO markdown, NO code blocks:
 
 Create 1-4 tasks based on request. Keep titles simple, no special characters.`
       
+    } else if (action === 'delete_tasks') {
+      prompt = `${systemRole}
+
+${contextInfo}
+
+User wants to delete tasks: "${message}"
+
+Current tasks in the project:
+${projectContext?.currentTasks?.map((t, i) => `${i + 1}. "${t.title}" (${t.category})`).join('\n') || 'No tasks available'}
+
+Identify which task(s) the user wants to delete based on their message. Match by title keywords.
+
+Return ONLY valid JSON with NO markdown, NO code blocks:
+{
+  "tasksToDelete": [
+    "exact title of task 1",
+    "exact title of task 2"
+  ],
+  "confirmation": "I'll delete: [task names]"
+}
+
+Be smart about partial matches (e.g., "delete character art" should match "Character Art Assets").
+If unsure, ask for clarification instead of deleting.`
+      
     } else {
       // Smart chat mode - detect intent
       const lowerMessage = message.toLowerCase()
@@ -273,15 +297,31 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
       }
     }
 
+    // Build conversation history for Gemini API
+    const contents = []
+    
+    // Add previous conversation messages
+    conversationHistory.forEach(msg => {
+      contents.push({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      })
+    })
+    
+    // Add current prompt
+    contents.push({
+      parts: [{ text: prompt }]
+    })
+    
     // Call Gemini API
-    console.log('Calling Gemini API...')
+    console.log('Calling Gemini API with', contents.length, 'messages in history...')
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
+          contents,
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 8192,

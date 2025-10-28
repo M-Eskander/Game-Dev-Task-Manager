@@ -1664,6 +1664,12 @@
                              (lowerMessage.includes('task') || lowerMessage.includes('todo'))) {
                         action = 'add_tasks';
                     }
+                    // Check for deleting tasks (only when in a project)
+                    else if (currentProjectId && 
+                             (lowerMessage.includes('delete') || lowerMessage.includes('remove') || lowerMessage.includes('get rid of')) && 
+                             (lowerMessage.includes('task') || lowerMessage.includes('todo'))) {
+                        action = 'delete_tasks';
+                    }
                     
                     // Get comprehensive project context
                     const projectContext = currentProjectId ? {
@@ -1680,12 +1686,13 @@
                         }))
                     } : null;
                     
-                    // Call Supabase Edge Function
+                    // Call Supabase Edge Function with conversation history
                     const { data, error } = await supabaseClient.functions.invoke('ai-assistant', {
                         body: {
                             message: userMessage,
                             projectContext,
-                            action
+                            action,
+                            conversationHistory: aiMessages // Send previous messages for context
                         }
                     });
                     
@@ -1744,6 +1751,32 @@
                             role: 'assistant',
                             content: `✅ Added ${processedTasks.length} new task${processedTasks.length > 1 ? 's' : ''} to your project!`
                         }]);
+                    } else if (action === 'delete_tasks' && data.tasksToDelete) {
+                        // Delete tasks by title
+                        const tasksToDeleteSet = new Set(data.tasksToDelete.map(t => t.toLowerCase().trim()));
+                        
+                        const updatedTasks = tasks.filter(task => {
+                            const taskTitleLower = task.title.toLowerCase().trim();
+                            return !tasksToDeleteSet.has(taskTitleLower) && 
+                                   ![...tasksToDeleteSet].some(deleteTitle => 
+                                       taskTitleLower.includes(deleteTitle) || deleteTitle.includes(taskTitleLower)
+                                   );
+                        });
+                        
+                        const deletedCount = tasks.length - updatedTasks.length;
+                        
+                        if (deletedCount > 0) {
+                            setTasks(updatedTasks);
+                            setAiMessages([...newMessages, {
+                                role: 'assistant',
+                                content: data.confirmation || `✅ Deleted ${deletedCount} task${deletedCount > 1 ? 's' : ''}!`
+                            }]);
+                        } else {
+                            setAiMessages([...newMessages, {
+                                role: 'assistant',
+                                content: `❌ Couldn't find tasks matching: "${data.tasksToDelete.join(', ')}". Please be more specific!`
+                            }]);
+                        }
                     } else {
                         // Regular chat response
                         setAiMessages([...newMessages, {
