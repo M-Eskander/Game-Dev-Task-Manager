@@ -1827,18 +1827,107 @@
                 }
             };
 
-            const removeProjectMember = async (memberId) => {
-                const { error } = await supabaseClient
-                    .from('project_members')
-                    .delete()
-                    .eq('id', memberId);
-                
-                if (error) {
+            const removeProjectMember = async (memberId, userId) => {
+                try {
+                    // Check if member has assigned tasks in current project
+                    const countAssignedTasks = (taskList, targetUserId) => {
+                        let count = 0;
+                        const checkRecursive = (tasks) => {
+                            tasks.forEach(task => {
+                                if (task.assigned_to === targetUserId) count++;
+                                if (task.subtasks && task.subtasks.length > 0) {
+                                    checkRecursive(task.subtasks);
+                                }
+                            });
+                        };
+                        checkRecursive(taskList);
+                        return count;
+                    };
+                    
+                    const assignedTaskCount = countAssignedTasks(tasks, userId);
+                    
+                    // Show warning if member has assigned tasks
+                    if (assignedTaskCount > 0) {
+                        const member = projectMembers.find(m => m.id === memberId);
+                        const memberName = member?.username || 'this member';
+                        
+                        setConfirmDialog({
+                            title: 'Remove Member with Assigned Tasks',
+                            message: `@${memberName} has ${assignedTaskCount} task${assignedTaskCount === 1 ? '' : 's'} assigned to them. If you remove this member, all their assigned tasks will become unassigned. Continue?`,
+                            onConfirm: async () => {
+                                await performMemberRemoval(memberId, userId);
+                                setConfirmDialog(null);
+                            },
+                            onCancel: () => setConfirmDialog(null)
+                        });
+                    } else {
+                        // No assigned tasks, remove directly
+                        await performMemberRemoval(memberId, userId);
+                    }
+                } catch (error) {
+                    console.error('Error checking member tasks:', error);
+                    showToast('Failed to remove member', 'error');
+                }
+            };
+            
+            const performMemberRemoval = async (memberId, userId) => {
+                try {
+                    // First, unassign all tasks assigned to this user
+                    const unassignTasks = (taskList) => {
+                        return taskList.map(task => {
+                            const updatedTask = { ...task };
+                            if (updatedTask.assigned_to === userId) {
+                                updatedTask.assigned_to = null;
+                            }
+                            if (updatedTask.subtasks && updatedTask.subtasks.length > 0) {
+                                updatedTask.subtasks = unassignTasks(updatedTask.subtasks);
+                            }
+                            return updatedTask;
+                        });
+                    };
+                    
+                    const updatedTasks = unassignTasks(tasks);
+                    setTasks(updatedTasks);
+                    
+                    // Save the updated project with unassigned tasks
+                    const currentProject = projects.find(p => p.id === currentProjectId);
+                    if (currentProject) {
+                        const { error: updateError } = await supabaseClient
+                            .from('projects')
+                            .update({ tasks: updatedTasks })
+                            .eq('id', currentProjectId);
+                        
+                        if (updateError) {
+                            console.error('Error updating tasks:', updateError);
+                        }
+                    }
+                    
+                    // Delete member from database
+                    const { error } = await supabaseClient
+                        .from('project_members')
+                        .delete()
+                        .eq('id', memberId);
+                    
+                    if (error) {
+                        console.error('Error removing member:', error);
+                        showToast('Failed to remove member', 'error');
+                    } else {
+                        // Update local state - remove member from projectMembers
+                        setProjectMembers(prev => prev.filter(m => m.id !== memberId));
+                        
+                        // Also update the projects list to remove this member's association
+                        setProjects(prev => prev.map(p => {
+                            if (p.id === currentProjectId) {
+                                return { ...p, tasks: updatedTasks };
+                            }
+                            return p;
+                        }));
+                        
+                        showToast('Member removed successfully', 'success');
+                    }
+                } catch (error) {
                     console.error('Error removing member:', error);
                     showToast('Failed to remove member', 'error');
-                } else {
-                    showToast('Member removed successfully', 'success');
-                    loadProjectMembers(currentProjectId);
                 }
             };
 
@@ -3055,7 +3144,7 @@
                                                             </div>
                                                             {!isYou && isOwner && (
                                                                 <button 
-                                                                    onClick={() => removeProjectMember(member.id)}
+                                                                    onClick={() => removeProjectMember(member.id, member.user_id)}
                                                                     className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
                                                                 >
                                                                     <Trash2 className="w-4 h-4" />
