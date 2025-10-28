@@ -826,12 +826,12 @@
             const [pendingInvitations, setPendingInvitations] = useState([]);
             const [userUsername, setUserUsername] = useState('');
             
-            // AI Project Generator states
-            const [showAIGenerator, setShowAIGenerator] = useState(false);
-            const [aiDescription, setAiDescription] = useState('');
+            // AI Assistant Chat states
+            const [showAIChat, setShowAIChat] = useState(false);
+            const [aiMessages, setAiMessages] = useState([]);
+            const [aiInput, setAiInput] = useState('');
             const [aiGenerating, setAiGenerating] = useState(false);
             const [aiGeneratedProject, setAiGeneratedProject] = useState(null);
-            const [geminiApiKey, setGeminiApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
 
             // Load user username
             useEffect(() => {
@@ -1563,116 +1563,112 @@
                 });
             };
 
-            // AI Project Generator using Google Gemini
-            const generateProjectWithAI = async () => {
-                if (!aiDescription.trim()) {
-                    showToast('Please describe your project first!', 'warning');
-                    return;
-                }
+            // AI Assistant Chat Handler
+            const sendAIMessage = async (messageText = null) => {
+                const userMessage = messageText || aiInput.trim();
+                if (!userMessage) return;
                 
-                if (!geminiApiKey.trim()) {
-                    showToast('Please add your free Gemini API key first!', 'error');
-                    return;
-                }
-                
+                // Add user message to chat
+                const newMessages = [...aiMessages, { role: 'user', content: userMessage }];
+                setAiMessages(newMessages);
+                setAiInput('');
                 setAiGenerating(true);
                 
                 try {
-                    const prompt = `You are a game development project planner. Based on this game project description, create a detailed task breakdown.
-
-Description: "${aiDescription}"
-
-Generate a JSON response with this EXACT structure (valid JSON only, no markdown):
-{
-  "projectName": "string",
-  "description": "string",
-  "tasks": [
-    {
-      "title": "string",
-      "category": "Design|Art|Code|Audio|Other",
-      "difficulty": 1-5,
-      "importance": 1-5,
-      "deadline": "",
-      "notes": "string",
-      "subtasks": [
-        {
-          "title": "string",
-          "category": "Design|Art|Code|Audio|Other",
-          "difficulty": 1-5,
-          "importance": 1-5,
-          "deadline": "",
-          "notes": "string"
-        }
-      ]
-    }
-  ]
-}
-
-Rules:
-- Create 5-15 main tasks
-- Each main task should have 2-5 subtasks
-- Use appropriate categories
-- Set realistic difficulty (1=easy, 5=hard) and importance (1=low, 5=critical)
-- Add helpful notes explaining what needs to be done
-- Leave deadlines empty
-- Focus on game development workflow: Design → Art → Code → Audio → Testing`;
-
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [{ text: prompt }]
-                            }]
-                        })
+                    // Determine action based on message
+                    let action = 'chat';
+                    const lowerMessage = userMessage.toLowerCase();
+                    
+                    if (lowerMessage.includes('create project') || lowerMessage.includes('generate project') || lowerMessage.includes('new project')) {
+                        action = 'generate_project';
+                    } else if (lowerMessage.includes('add task') || lowerMessage.includes('create task') || lowerMessage.includes('new task')) {
+                        action = 'add_tasks';
+                    }
+                    
+                    // Get project context
+                    const projectContext = currentProjectId ? {
+                        projectName: projectName,
+                        taskCount: tasks.length,
+                        projectId: currentProjectId
+                    } : null;
+                    
+                    // Call Supabase Edge Function
+                    const { data, error } = await supabaseClient.functions.invoke('ai-assistant', {
+                        body: {
+                            message: userMessage,
+                            projectContext,
+                            action
+                        }
                     });
                     
-                    if (!response.ok) {
-                        const error = await response.text();
-                        console.error('Gemini API Error:', error);
-                        throw new Error('Failed to generate project. Check your API key.');
-                    }
+                    if (error) throw error;
                     
-                    const data = await response.json();
-                    const generatedText = data.candidates[0].content.parts[0].text;
-                    
-                    // Extract JSON from markdown code blocks if present
-                    let jsonText = generatedText;
-                    if (generatedText.includes('```json')) {
-                        jsonText = generatedText.split('```json')[1].split('```')[0].trim();
-                    } else if (generatedText.includes('```')) {
-                        jsonText = generatedText.split('```')[1].split('```')[0].trim();
-                    }
-                    
-                    const generated = JSON.parse(jsonText);
-                    
-                    // Add required fields to tasks
-                    const processedTasks = generated.tasks.map(task => ({
-                        ...task,
-                        id: Date.now().toString() + Math.random(),
-                        completed: false,
-                        assigned_to: null,
-                        comments: [],
-                        subtasks: task.subtasks ? task.subtasks.map(st => ({
-                            ...st,
+                    // Handle response based on action
+                    if (action === 'generate_project' && data.projectName) {
+                        // Process generated project
+                        const processedTasks = data.tasks.map(task => ({
+                            ...task,
                             id: Date.now().toString() + Math.random(),
                             completed: false,
                             assigned_to: null,
                             comments: [],
-                            subtasks: []
-                        })) : []
-                    }));
-                    
-                    setAiGeneratedProject({
-                        name: generated.projectName,
-                        description: generated.description,
-                        tasks: processedTasks
-                    });
-                    
-                    showToast('✨ Project generated by AI! Review and create.', 'success');
+                            subtasks: task.subtasks ? task.subtasks.map(st => ({
+                                ...st,
+                                id: Date.now().toString() + Math.random(),
+                                completed: false,
+                                assigned_to: null,
+                                comments: [],
+                                subtasks: []
+                            })) : []
+                        }));
+                        
+                        setAiGeneratedProject({
+                            name: data.projectName,
+                            description: data.description,
+                            tasks: processedTasks
+                        });
+                        
+                        setAiMessages([...newMessages, {
+                            role: 'assistant',
+                            content: `✨ I've created a project plan for "${data.projectName}" with ${data.tasks.length} tasks! Review it below and click "Create Project" if you like it.`,
+                            hasProject: true
+                        }]);
+                    } else if (action === 'add_tasks' && data.tasks) {
+                        // Add tasks to current project
+                        const processedTasks = data.tasks.map(task => ({
+                            ...task,
+                            id: Date.now().toString() + Math.random(),
+                            completed: false,
+                            assigned_to: null,
+                            comments: [],
+                            subtasks: task.subtasks ? task.subtasks.map(st => ({
+                                ...st,
+                                id: Date.now().toString() + Math.random(),
+                                completed: false,
+                                assigned_to: null,
+                                comments: [],
+                                subtasks: []
+                            })) : []
+                        }));
+                        
+                        setTasks([...tasks, ...processedTasks]);
+                        setAiMessages([...newMessages, {
+                            role: 'assistant',
+                            content: `✅ Added ${processedTasks.length} new task${processedTasks.length > 1 ? 's' : ''} to your project!`
+                        }]);
+                    } else {
+                        // Regular chat response
+                        setAiMessages([...newMessages, {
+                            role: 'assistant',
+                            content: data.response || 'I can help you create projects, add tasks, or answer questions!'
+                        }]);
+                    }
                 } catch (error) {
-                    console.error('AI Generation Error:', error);
-                    showToast('Failed to generate project: ' + error.message, 'error');
+                    console.error('AI Error:', error);
+                    setAiMessages([...newMessages, {
+                        role: 'assistant',
+                        content: '❌ Sorry, I encountered an error. Please try again!'
+                    }]);
                 } finally {
                     setAiGenerating(false);
                 }
@@ -1708,9 +1704,8 @@ Rules:
                 
                 if (data) {
                     setProjects([...projects, data]);
-                    setShowAIGenerator(false);
-                    setAiDescription('');
                     setAiGeneratedProject(null);
+                    setAiMessages([]);
                     switchProject(data.id);
                     showToast('🎉 AI-generated project created successfully!', 'success');
                 }
@@ -2480,20 +2475,9 @@ Rules:
                                         }} className={`p-3 rounded-xl ${globalDarkMode ? 'bg-red-700 hover:bg-red-600' : 'bg-red-100 hover:bg-red-200'}`} title="Logout">
                                             <LogOut className="w-6 h-6 text-red-600" />
                                         </button>
-                                        {activeTab === 'projects' ? (
-                                            <>
-                                                <button onClick={() => setShowNewProjectInput(true)} className="px-6 py-3 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all" style={{ background: `linear-gradient(135deg, ${dashboardPrimaryColor}, ${dashboardSecondaryColor})` }}>
-                                                    <Plus className="w-5 h-5" /> New Project
-                                                </button>
-                                                <button onClick={() => setShowAIGenerator(true)} className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all hover:scale-105">
-                                                    <span className="text-xl">🤖</span> Generate with AI
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <button onClick={() => setShowNewIdeaInput(true)} className="px-6 py-3 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all" style={{ background: `linear-gradient(135deg, ${dashboardPrimaryColor}, ${dashboardSecondaryColor})` }}>
-                                                <Plus className="w-5 h-5" /> New Idea
-                                            </button>
-                                        )}
+                                        <button onClick={() => activeTab === 'projects' ? setShowNewProjectInput(true) : setShowNewIdeaInput(true)} className="px-6 py-3 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-all" style={{ background: `linear-gradient(135deg, ${dashboardPrimaryColor}, ${dashboardSecondaryColor})` }}>
+                                            <Plus className="w-5 h-5" /> {activeTab === 'projects' ? 'New Project' : 'New Idea'}
+                                        </button>
                                     </div>
                                 </div>
                                 
@@ -2549,120 +2533,6 @@ Rules:
                                                 Cancel
                                             </button>
                                         </div>
-                                    </div>
-                                )}
-
-                                {/* AI Project Generator Modal */}
-                                {showAIGenerator && (
-                                    <div className={`mb-8 p-6 rounded-xl border-2 ${globalDarkMode ? 'bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-500/50' : 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300'}`}>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className={`text-2xl font-bold flex items-center gap-2 ${globalDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                                                <span className="text-3xl">🤖</span> AI Project Generator
-                                            </h3>
-                                            <button onClick={() => {setShowAIGenerator(false); setAiDescription(''); setAiGeneratedProject(null);}} className={`p-2 rounded-lg ${globalDarkMode ? 'hover:bg-gray-700' : 'hover:bg-white/50'}`}>
-                                                <X className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                        
-                                        {!aiGeneratedProject ? (
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <label className={`block text-sm font-semibold mb-2 ${globalDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                                        🔑 Gemini API Key (Free - Get it at https://makersuite.google.com/app/apikey)
-                                                    </label>
-                                                    <input 
-                                                        type="password"
-                                                        value={geminiApiKey} 
-                                                        onChange={(e) => {
-                                                            setGeminiApiKey(e.target.value);
-                                                            localStorage.setItem('gemini_api_key', e.target.value);
-                                                        }}
-                                                        className={`w-full px-4 py-3 border-2 rounded-xl ${globalDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`} 
-                                                        placeholder="AIzaSy..." 
-                                                    />
-                                                </div>
-                                                
-                                                <div>
-                                                    <label className={`block text-sm font-semibold mb-2 ${globalDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                                        📝 Describe Your Game Project
-                                                    </label>
-                                                    <textarea 
-                                                        value={aiDescription} 
-                                                        onChange={(e) => setAiDescription(e.target.value)} 
-                                                        className={`w-full px-4 py-3 border-2 rounded-xl min-h-32 ${globalDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`} 
-                                                        placeholder="Example: A 2D platformer about a robot cat collecting batteries. Need to create character sprites, level designs, animations, sound effects, and UI. The game should have 10 levels with increasing difficulty."
-                                                        autoFocus
-                                                    />
-                                                    <p className={`text-xs mt-2 ${globalDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                        The more detailed your description, the better the AI can plan your project!
-                                                    </p>
-                                                </div>
-                                                
-                                                <div className="flex gap-3">
-                                                    <button 
-                                                        onClick={generateProjectWithAI} 
-                                                        disabled={aiGenerating}
-                                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        {aiGenerating ? (
-                                                            <>
-                                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                                                Generating...
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <span className="text-xl">✨</span> Generate Project
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => {setShowAIGenerator(false); setAiDescription('');}}
-                                                        className={`px-6 py-3 rounded-xl font-semibold ${globalDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                <div className={`p-4 rounded-xl ${globalDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
-                                                    <h4 className={`text-xl font-bold mb-2 ${globalDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                                                        {aiGeneratedProject.name}
-                                                    </h4>
-                                                    <p className={`mb-4 ${globalDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                        {aiGeneratedProject.description}
-                                                    </p>
-                                                    <div className={`p-3 rounded-lg ${globalDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                                                        <p className={`text-sm font-semibold mb-2 ${globalDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                                            📋 Generated Tasks: {aiGeneratedProject.tasks.length} main tasks
-                                                        </p>
-                                                        <ul className={`space-y-1 text-sm ${globalDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                            {aiGeneratedProject.tasks.slice(0, 5).map((task, i) => (
-                                                                <li key={i}>• {task.title} ({task.subtasks?.length || 0} subtasks)</li>
-                                                            ))}
-                                                            {aiGeneratedProject.tasks.length > 5 && (
-                                                                <li>... and {aiGeneratedProject.tasks.length - 5} more tasks</li>
-                                                            )}
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="flex gap-3">
-                                                    <button 
-                                                        onClick={createAIGeneratedProject}
-                                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                                                    >
-                                                        <span className="text-xl">🎉</span> Create This Project
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setAiGeneratedProject(null)}
-                                                        className={`px-6 py-3 rounded-xl font-semibold ${globalDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-                                                    >
-                                                        ← Edit Description
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 )}
 
@@ -3717,6 +3587,126 @@ Rules:
                                 </button>
                             </div>
                         </div>
+                    </div>
+                    
+                    {/* AI Assistant Chat Widget - Fixed Bottom Left */}
+                    <div className="fixed bottom-8 left-8 z-50">
+                        {!showAIChat ? (
+                            <button
+                                onClick={() => setShowAIChat(true)}
+                                className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-2xl hover:scale-110 transition-all flex items-center justify-center text-3xl animate-bounce"
+                                title="AI Assistant"
+                            >
+                                🤖
+                            </button>
+                        ) : (
+                            <div className={`w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col ${(darkMode || globalDarkMode) ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                                {/* Chat Header */}
+                                <div className="flex items-center justify-between p-4 border-b ${(darkMode || globalDarkMode) ? 'border-gray-700 bg-gradient-to-r from-purple-900 to-pink-900' : 'border-gray-200 bg-gradient-to-r from-purple-600 to-pink-600'}">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-3xl">🤖</span>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white">AI Assistant</h3>
+                                            <p className="text-xs text-white/80">Ask me anything!</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowAIChat(false)}
+                                        className="p-2 hover:bg-white/20 rounded-lg transition-all"
+                                    >
+                                        <X className="w-5 h-5 text-white" />
+                                    </button>
+                                </div>
+                                
+                                {/* Chat Messages */}
+                                <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${(darkMode || globalDarkMode) ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                                    {aiMessages.length === 0 ? (
+                                        <div className={`text-center py-8 ${(darkMode || globalDarkMode) ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            <p className="text-sm mb-4">👋 Hi! I can help you with:</p>
+                                            <div className="space-y-2 text-xs">
+                                                <p>• "Create a project for a 2D platformer game"</p>
+                                                <p>• "Add tasks for character animations"</p>
+                                                <p>• "What should I work on next?"</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        aiMessages.map((msg, i) => (
+                                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] p-3 rounded-lg ${
+                                                    msg.role === 'user'
+                                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                                        : (darkMode || globalDarkMode) ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'
+                                                }`}>
+                                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                    {aiGenerating && (
+                                        <div className="flex justify-start">
+                                            <div className={`p-3 rounded-lg ${(darkMode || globalDarkMode) ? 'bg-gray-800' : 'bg-white'}`}>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                                    <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* Generated Project Preview */}
+                                {aiGeneratedProject && (
+                                    <div className={`p-4 border-t ${(darkMode || globalDarkMode) ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+                                        <div className={`p-3 rounded-lg mb-3 ${(darkMode || globalDarkMode) ? 'bg-gray-900' : 'bg-white'}`}>
+                                            <h4 className={`text-sm font-bold mb-1 ${(darkMode || globalDarkMode) ? 'text-white' : 'text-gray-800'}`}>
+                                                {aiGeneratedProject.name}
+                                            </h4>
+                                            <p className={`text-xs mb-2 ${(darkMode || globalDarkMode) ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                {aiGeneratedProject.tasks.length} tasks generated
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={createAIGeneratedProject}
+                                            className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:scale-105 transition-all"
+                                        >
+                                            <span>🎉</span> Create Project
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                {/* Chat Input */}
+                                <div className={`p-4 border-t ${(darkMode || globalDarkMode) ? 'border-gray-700' : 'border-gray-200'}`}>
+                                    <form
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            sendAIMessage();
+                                        }}
+                                        className="flex gap-2"
+                                    >
+                                        <input
+                                            type="text"
+                                            value={aiInput}
+                                            onChange={(e) => setAiInput(e.target.value)}
+                                            disabled={aiGenerating}
+                                            placeholder="Type your message..."
+                                            className={`flex-1 px-4 py-2 rounded-lg border ${
+                                                (darkMode || globalDarkMode)
+                                                    ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400'
+                                                    : 'bg-white border-gray-300'
+                                            } focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={!aiInput.trim() || aiGenerating}
+                                            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-all"
+                                        >
+                                            Send
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     
                     {/* Toast Notifications */}
