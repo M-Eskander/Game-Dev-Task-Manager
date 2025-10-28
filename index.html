@@ -3028,6 +3028,127 @@
                             </div>
                         </div>
                     
+                    {/* AI Assistant Chat Widget - Fixed Bottom Left */}
+                    <div className="fixed bottom-8 left-8 z-50">
+                        {!showAIChat ? (
+                            <button
+                                onClick={() => setShowAIChat(true)}
+                                className="px-8 py-4 text-white rounded-2xl font-bold text-lg shadow-2xl hover:scale-105 transition-all flex items-center gap-3"
+                                style={{ background: `linear-gradient(135deg, ${dashboardPrimaryColor}, ${dashboardSecondaryColor})` }}
+                            >
+                                <span className="text-2xl">🤖</span>
+                                Chat with AI
+                            </button>
+                        ) : (
+                            <div className={`w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col ${globalDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                                {/* Chat Header */}
+                                <div className={`flex items-center justify-between p-4 border-b ${globalDarkMode ? 'border-gray-700 bg-gradient-to-r from-purple-900 to-pink-900' : 'border-gray-200 bg-gradient-to-r from-purple-600 to-pink-600'}`}>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-3xl">🤖</span>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white">AI Assistant</h3>
+                                            <p className="text-xs text-white/80">Ask me anything!</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowAIChat(false)}
+                                        className="p-2 hover:bg-white/20 rounded-lg transition-all"
+                                    >
+                                        <X className="w-5 h-5 text-white" />
+                                    </button>
+                                </div>
+                                
+                                {/* Chat Messages */}
+                                <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${globalDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                                    {aiMessages.length === 0 ? (
+                                        <div className={`text-center py-8 ${globalDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            <p className="text-sm mb-4">👋 Hi! I can help you with:</p>
+                                            <div className="space-y-2 text-xs">
+                                                <p>• "Create a project for a 2D platformer game"</p>
+                                                <p>• "Add tasks for character animations"</p>
+                                                <p>• "What should I work on next?"</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        aiMessages.map((msg, i) => (
+                                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] p-3 rounded-lg ${
+                                                    msg.role === 'user'
+                                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                                        : globalDarkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'
+                                                }`}>
+                                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                    {aiGenerating && (
+                                        <div className="flex justify-start">
+                                            <div className={`p-3 rounded-lg ${globalDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                                    <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* Generated Project Preview */}
+                                {aiGeneratedProject && (
+                                    <div className={`p-4 border-t ${globalDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+                                        <div className={`p-3 rounded-lg mb-3 ${globalDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+                                            <h4 className={`text-sm font-bold mb-1 ${globalDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                                                {aiGeneratedProject.name}
+                                            </h4>
+                                            <p className={`text-xs mb-2 ${globalDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                {aiGeneratedProject.tasks.length} tasks generated
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={createAIGeneratedProject}
+                                            className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:scale-105 transition-all"
+                                        >
+                                            <span>🎉</span> Create Project
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                {/* Chat Input */}
+                                <div className={`p-4 border-t ${globalDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                                    <form
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            sendAIMessage();
+                                        }}
+                                        className="flex gap-2"
+                                    >
+                                        <input
+                                            type="text"
+                                            value={aiInput}
+                                            onChange={(e) => setAiInput(e.target.value)}
+                                            disabled={aiGenerating}
+                                            placeholder="Type your message..."
+                                            className={`flex-1 px-4 py-2 rounded-lg border ${
+                                                globalDarkMode
+                                                    ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400'
+                                                    : 'bg-white border-gray-300'
+                                            } focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={!aiInput.trim() || aiGenerating}
+                                            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-all"
+                                        >
+                                            Send
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
                     {/* Toast Notifications */}
                     {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
                     
@@ -3594,10 +3715,11 @@
                         {!showAIChat ? (
                             <button
                                 onClick={() => setShowAIChat(true)}
-                                className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-2xl hover:scale-110 transition-all flex items-center justify-center text-3xl animate-bounce"
-                                title="AI Assistant"
+                                className="px-8 py-4 text-white rounded-2xl font-bold text-lg shadow-2xl hover:scale-105 transition-all flex items-center gap-3"
+                                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
                             >
-                                🤖
+                                <span className="text-2xl">🤖</span>
+                                Chat with AI
                             </button>
                         ) : (
                             <div className={`w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col ${(darkMode || globalDarkMode) ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
