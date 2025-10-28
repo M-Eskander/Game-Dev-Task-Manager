@@ -79,7 +79,27 @@ Be concise, friendly, and actionable. If asked to perform an action (like "mark 
 
 User wants to create a new project: "${message}"
 
-Generate a comprehensive game development project plan. Return ONLY valid JSON with NO markdown, NO code blocks, NO extra text. CRITICAL: Escape all quotes in strings, avoid line breaks in strings. Return pure JSON only:
+You are an EXPERT game development project manager. Generate a COMPREHENSIVE, REALISTIC game development plan.
+
+CRITICAL INSTRUCTIONS:
+1. ALWAYS include tasks for ALL categories: Design, Art, Code, Audio, Testing (even if user didnt mention them)
+2. If story or design not mentioned, create basic story/design tasks and suggest ideas in notes
+3. Add STANDARD tasks every game needs: UI, menus, save system, input handling, settings
+4. Add SPECIFIC tasks based on description (e.g., bot AI if description mentions bot, garden environment if mentions garden)
+5. Add OPTIONAL tasks with importance 1-2 for nice-to-have features (attacks, power-ups, achievements)
+6. Calculate REALISTIC deadlines for EVERY task and subtask based on difficulty, importance, and workflow order
+
+DEADLINE CALCULATION (VERY IMPORTANT):
+- Extract project deadline from message if provided
+- Calculate dates working backwards from project deadline, or forward from today if no deadline
+- Task order: Design (earliest) → Art → Code → Audio → Testing (latest)
+- Difficulty 1 = 1 day, 2 = 2 days, 3 = 3 days, 4 = 5 days, 5 = 7 days
+- Important tasks (importance 5) get earlier deadlines, optional (1-2) get later deadlines
+- Subtask deadlines MUST be before parent task deadline
+- Format: "YYYY-MM-DD" (e.g., "2025-11-15")
+- NEVER leave deadline empty - always calculate a date
+
+Return ONLY valid JSON with NO markdown, NO code blocks:
 {
   "projectName": "string",
   "description": "string",
@@ -89,15 +109,15 @@ Generate a comprehensive game development project plan. Return ONLY valid JSON w
       "category": "Design|Art|Code|Audio|Other",
       "difficulty": 1-5,
       "importance": 1-5,
-      "deadline": "",
-      "notes": "detailed helpful notes",
+      "deadline": "YYYY-MM-DD",
+      "notes": "suggestions, tools, tips, or story ideas if missing",
       "subtasks": [
         {
           "title": "string",
           "category": "Design|Art|Code|Audio|Other",
           "difficulty": 1-5,
           "importance": 1-5,
-          "deadline": "",
+          "deadline": "YYYY-MM-DD",
           "notes": "string"
         }
       ]
@@ -105,13 +125,20 @@ Generate a comprehensive game development project plan. Return ONLY valid JSON w
   ]
 }
 
+REQUIRED TASK COVERAGE (for ANY game):
+1. Design (importance 5): Story, core mechanics, level design, game design document
+2. Art (importance 4-5): Character sprites, environment, UI elements, animations, VFX
+3. Code (importance 5): Player movement, core mechanics, UI system, save system, menus, settings
+4. Audio (importance 3-4): Background music, sound effects, audio mixing
+5. Testing (importance 4): Playtesting, bug fixes, balancing, polish
+
 Rules:
-- Create 4-6 main tasks ONLY (keep it concise to avoid token limits)
-- Each main task: 2-3 subtasks maximum
-- Logical workflow: Design → Art → Code → Audio → Testing
-- Realistic difficulty/importance
-- Keep notes SHORT (one sentence max)
-- Simple titles without special characters or quotes`
+- Create 6-8 main tasks covering ALL categories above
+- Each task: 3-4 subtasks with specific details
+- Keep titles simple without special characters
+- Notes should suggest tools, techniques, or missing story elements
+- ALWAYS calculate and include deadlines (never empty string)
+- Balance importance: 4-5 for core features, 3 for standard features, 1-2 for optional`
       
     } else if (action === 'add_tasks') {
       prompt = `${systemRole}
@@ -120,7 +147,20 @@ ${contextInfo}
 
 User wants to add tasks: "${message}"
 
-Generate tasks to add to the current project. Return ONLY valid JSON with NO markdown, NO code blocks. CRITICAL: Escape all quotes in strings, keep strings simple. Return pure JSON only:
+Generate tasks to add to the existing project. Be smart about:
+1. Understanding what category the task should be (Design, Art, Code, Audio, Other)
+2. Adding relevant subtasks (2-4 per main task)
+3. Setting realistic difficulty and importance
+4. Calculating deadlines based on difficulty (1 day per difficulty point)
+5. Adding helpful notes with suggestions
+
+DEADLINE CALCULATION:
+- Start from today or current project timeline
+- Difficulty 1 = 1 day, 2 = 2 days, 3 = 3 days, 4 = 5 days, 5 = 7 days
+- Format: "YYYY-MM-DD"
+- Subtask deadlines BEFORE parent deadline
+
+Return ONLY valid JSON with NO markdown, NO code blocks:
 {
   "tasks": [
     {
@@ -128,14 +168,23 @@ Generate tasks to add to the current project. Return ONLY valid JSON with NO mar
       "category": "Design|Art|Code|Audio|Other",
       "difficulty": 1-5,
       "importance": 1-5,
-      "deadline": "",
-      "notes": "string",
-      "subtasks": [...]
+      "deadline": "YYYY-MM-DD",
+      "notes": "helpful suggestions",
+      "subtasks": [
+        {
+          "title": "string",
+          "category": "Design|Art|Code|Audio|Other",
+          "difficulty": 1-5,
+          "importance": 1-5,
+          "deadline": "YYYY-MM-DD",
+          "notes": "string"
+        }
+      ]
     }
   ]
 }
 
-Create 1-5 tasks based on context.`
+Create 1-4 tasks based on request. Keep titles simple, no special characters.`
       
     } else {
       // Smart chat mode - detect intent
