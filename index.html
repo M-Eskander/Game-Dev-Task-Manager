@@ -1912,6 +1912,19 @@
                         console.error('Error removing member:', error);
                         showToast('Failed to remove member', 'error');
                     } else {
+                        // Also delete any invitation records for this user in this project
+                        // This allows them to be re-invited later
+                        const { error: inviteError } = await supabaseClient
+                            .from('project_invitations')
+                            .delete()
+                            .eq('project_id', currentProjectId)
+                            .eq('invited_user_id', userId);
+                        
+                        if (inviteError) {
+                            console.error('Error removing invitation record:', inviteError);
+                            // Don't show error to user, member was removed successfully
+                        }
+                        
                         // Update local state - remove member from projectMembers
                         setProjectMembers(prev => prev.filter(m => m.id !== memberId));
                         
