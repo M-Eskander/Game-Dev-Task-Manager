@@ -238,14 +238,14 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log('✅ Supabase client initialized:', supabaseClient ? 'Success' : 'Failed');
 
-        const CATEGORIES = ['Story', 'Art', 'Programming', 'Sound', 'Other'];
+        const CATEGORIES = ['Design', 'Art', 'Code', 'Audio', 'Other'];
         
         const getCategoryIcon = (category) => {
             const icons = {
-                'Story': <BookOpen className="w-5 h-5" />,
+                'Design': <BookOpen className="w-5 h-5" />,
                 'Art': <Palette className="w-5 h-5" />,
-                'Programming': <Code className="w-5 h-5" />,
-                'Sound': <Music className="w-5 h-5" />,
+                'Code': <Code className="w-5 h-5" />,
+                'Audio': <Music className="w-5 h-5" />,
                 'Other': <Package className="w-5 h-5" />
             };
             return icons[category] || icons['Other'];
