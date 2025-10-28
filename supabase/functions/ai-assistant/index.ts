@@ -314,38 +314,18 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
       try {
         result = JSON.parse(jsonText)
         
-        // FORCE ALL CATEGORIES for generate_project action
-        if (action === 'generate_project' && result.tasks) {
-          console.log('Validating task categories...')
+        // Fix deadlines for ALL actions that generate tasks
+        const today = new Date()
+        const formatDate = (daysFromNow) => {
+          const d = new Date(today)
+          d.setDate(d.getDate() + daysFromNow)
+          return d.toISOString().split('T')[0]
+        }
+        
+        // Fix past deadlines in tasks (for both generate_project and add_tasks)
+        if ((action === 'generate_project' || action === 'add_tasks') && result.tasks) {
+          console.log('Fixing deadlines for', result.tasks.length, 'tasks...')
           
-          // Count existing categories
-          const categoryCounts = {
-            'Design': 0,
-            'Art': 0,
-            'Code': 0,
-            'Audio': 0,
-            'Other': 0
-          }
-          
-          result.tasks.forEach(task => {
-            if (categoryCounts[task.category] !== undefined) {
-              categoryCounts[task.category]++
-            }
-          })
-          
-          console.log('Category counts:', categoryCounts)
-          
-          // Get today's date for deadline calculations (ensure future dates)
-          const today = new Date()
-          console.log('Today is:', today.toISOString().split('T')[0])
-          
-          const formatDate = (daysFromNow) => {
-            const d = new Date(today)
-            d.setDate(d.getDate() + daysFromNow)
-            return d.toISOString().split('T')[0]
-          }
-          
-          // Also fix any existing tasks with past deadlines
           result.tasks = result.tasks.map((task, index) => {
             // Check if deadline is in the past
             const taskDeadline = new Date(task.deadline)
@@ -372,6 +352,29 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
             
             return task
           })
+        }
+        
+        // FORCE ALL CATEGORIES for generate_project action
+        if (action === 'generate_project' && result.tasks) {
+          console.log('Validating task categories...')
+          
+          // Count existing categories
+          const categoryCounts = {
+            'Design': 0,
+            'Art': 0,
+            'Code': 0,
+            'Audio': 0,
+            'Other': 0
+          }
+          
+          result.tasks.forEach(task => {
+            if (categoryCounts[task.category] !== undefined) {
+              categoryCounts[task.category]++
+            }
+          })
+          
+          console.log('Category counts:', categoryCounts)
+          console.log('Today is:', today.toISOString().split('T')[0])
           
           // Add missing categories with default tasks (3+ tasks per category)
           const missingTasks = []
