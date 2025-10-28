@@ -389,7 +389,7 @@
             );
         };
 
-        const TaskItem = ({ task, onUpdate, onDelete, onToggle, level, colors, darkMode }) => {
+        const TaskItem = ({ task, onUpdate, onDelete, onToggle, level, colors, darkMode, projectMembers, user, currentProject, projectOwnerUsername }) => {
             const [expanded, setExpanded] = useState(true);
             const [editing, setEditing] = useState(false);
             const [showNotes, setShowNotes] = useState(false);
@@ -402,6 +402,24 @@
             const priority = calculatePriority(task);
             const priorityLevel = getPriorityLevel(priority);
             const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+            
+            // Check if current user can edit this task
+            const canEdit = () => {
+                // Owner can edit everything
+                if (currentProject && currentProject.owner_id === user?.id) {
+                    return true;
+                }
+                // If task is unassigned, anyone can edit
+                if (!task.assigned_to) {
+                    return true;
+                }
+                // If task is assigned to current user, they can edit
+                if (task.assigned_to === user?.id) {
+                    return true;
+                }
+                // Otherwise, can only view
+                return false;
+            };
 
             const handleSave = () => {
                 onUpdate(editData);
@@ -417,7 +435,8 @@
                     deadline: '',
                     notes: '',
                     completed: false,
-                    subtasks: []
+                    subtasks: [],
+                    assigned_to: null
                 };
                 onUpdate({ ...task, subtasks: [...(task.subtasks || []), newSubtask] });
             };
@@ -439,6 +458,31 @@
                         <div className="mb-3">
                             <label className={`text-xs mb-1 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Deadline</label>
                             <input type="date" value={editData.deadline} onChange={(e) => setEditData({ ...editData, deadline: e.target.value })} className={`w-full px-3 py-2 border rounded-lg ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`} />
+                        </div>
+                        <div className="mb-3">
+                            <label className={`text-xs mb-1 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Assign To</label>
+                            <select 
+                                value={editData.assigned_to || ''} 
+                                onChange={(e) => setEditData({ ...editData, assigned_to: e.target.value || null })} 
+                                className={`w-full px-3 py-2 border rounded-lg ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
+                            >
+                                <option value="">Unassigned (Anyone can edit)</option>
+                                {currentProject && (
+                                    <>
+                                        <option value={currentProject.owner_id}>
+                                            {currentProject.owner_id === user?.id ? 'You (Owner)' : `${projectOwnerUsername || 'Owner'}`}
+                                        </option>
+                                        {projectMembers && projectMembers.map(member => (
+                                            <option key={member.user_id} value={member.user_id}>
+                                                {member.user_id === user?.id ? 'You' : `@${member.username}`}
+                                            </option>
+                                        ))}
+                                    </>
+                                )}
+                            </select>
+                            <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {editData.assigned_to ? 'Only the assigned person can edit this task' : 'Anyone can view and edit'}
+                            </p>
                         </div>
                         <div className="mb-3">
                             <label className={`text-xs mb-1 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Notes</label>
@@ -478,26 +522,49 @@
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-3 mb-2">
-                                        <h3 className={`font-bold text-xl ${task.completed ? `line-through ${darkMode ? 'text-gray-500' : 'text-gray-400'}` : darkMode ? 'text-white' : 'text-gray-800'}`}>{task.title}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className={`font-bold text-xl ${task.completed ? `line-through ${darkMode ? 'text-gray-500' : 'text-gray-400'}` : darkMode ? 'text-white' : 'text-gray-800'}`}>{task.title}</h3>
+                                            {!canEdit() && (
+                                                <span className={`px-2 py-1 rounded text-xs font-semibold ${darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'}`}>
+                                                    👁️ View Only
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="flex gap-2 flex-shrink-0">
                                             {task.notes && (
                                                 <button onClick={() => setShowNotes(!showNotes)} className={`p-2 rounded-lg transition-all ${showNotes ? 'text-white' : darkMode ? 'text-gray-400' : 'text-gray-600'}`} style={showNotes ? { backgroundColor: colors.primary } : {}}>
                                                     <FileText className="w-4 h-4" />
                                                 </button>
                                             )}
-                                            <button onClick={() => setEditing(true)} className="p-2 rounded-lg" style={{ color: colors.primary }}>
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => onDelete(task.id, task.title)} className="p-2 rounded-lg text-red-600">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            {canEdit() && (
+                                                <>
+                                                    <button onClick={() => setEditing(true)} className="p-2 rounded-lg" style={{ color: colors.primary }}>
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => onDelete(task.id, task.title)} className="p-2 rounded-lg text-red-600">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap mb-2">
                                         <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Difficulty: {task.difficulty}/5</span>
                                         <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Importance: {task.importance}/5</span>
+                                        {task.assigned_to ? (
+                                            <span className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1`} style={{ backgroundColor: colors.primary + '20', color: colors.primary }}>
+                                                👤 {task.assigned_to === user?.id ? 'You' : 
+                                                    (task.assigned_to === currentProject?.owner_id ? 
+                                                        (currentProject.owner_id === user?.id ? 'You' : projectOwnerUsername || 'Owner') : 
+                                                        projectMembers?.find(m => m.user_id === task.assigned_to)?.username || 'Unknown')}
+                                            </span>
+                                        ) : (
+                                            <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${darkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                                                🌐 Unassigned
+                                            </span>
+                                        )}
                                     </div>
-                                    {!task.completed && (
+                                    {!task.completed && canEdit() && (
                                         <button onClick={handleAddSubtask} className={`mt-3 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`} style={{ color: colors.primary }}>
                                             <Plus className="w-4 h-4" /> Add Subtask
                                         </button>
@@ -526,7 +593,7 @@
                                     const updatedSubtasks = task.subtasks.map(st => st.id === id ? { ...st, completed: !st.completed } : st);
                                     const allCompleted = updatedSubtasks.every(st => st.completed);
                                     onUpdate({ ...task, subtasks: updatedSubtasks, completed: allCompleted });
-                                }} level={level + 1} colors={colors} darkMode={darkMode} />
+                                }} level={level + 1} colors={colors} darkMode={darkMode} projectMembers={projectMembers} user={user} currentProject={currentProject} projectOwnerUsername={projectOwnerUsername} />
                             ))}
                         </div>
                     )}
@@ -1186,7 +1253,8 @@
                     deadline: '',
                     notes: '',
                     completed: false,
-                    subtasks: []
+                    subtasks: [],
+                    assigned_to: null // null means unassigned
                 }]);
             };
 
@@ -1885,7 +1953,7 @@
                                     ) : (
                                         <div className="space-y-4">
                                             {sortedTasks.map(task => (
-                                                <TaskItem key={task.id} task={task} onUpdate={(updated) => updateTask(task.id, updated)} onDelete={deleteTask} onToggle={toggleTask} level={0} colors={colors} darkMode={darkMode} />
+                                                <TaskItem key={task.id} task={task} onUpdate={(updated) => updateTask(task.id, updated)} onDelete={deleteTask} onToggle={toggleTask} level={0} colors={colors} darkMode={darkMode} projectMembers={projectMembers} user={user} currentProject={projects.find(p => p.id === currentProjectId)} projectOwnerUsername={projectOwnerUsername} />
                                             ))}
                                         </div>
                                     )}
@@ -2317,10 +2385,18 @@
                                                 }
                                                 
                                                 const projectTasks = project.tasks || [];
+                                                const isOwner = project.owner_id === user.id;
                                                 const getAllTasksRecursive = (tasks, projectRef) => {
                                                     tasks.forEach(task => {
                                                         if (task.deadline && !task.completed) {
-                                                            allTasksWithDeadlines.push({ ...task, projectName: projectRef.name, projectId: projectRef.id });
+                                                            // Filter based on assignment:
+                                                            // - Show if user is project owner (can see all)
+                                                            // - Show if task is unassigned
+                                                            // - Show if task is assigned to current user
+                                                            const shouldShow = isOwner || !task.assigned_to || task.assigned_to === user.id;
+                                                            if (shouldShow) {
+                                                                allTasksWithDeadlines.push({ ...task, projectName: projectRef.name, projectId: projectRef.id });
+                                                            }
                                                         }
                                                         if (task.subtasks && task.subtasks.length > 0) {
                                                             getAllTasksRecursive(task.subtasks, projectRef);
@@ -2957,6 +3033,8 @@
                                         ) : (
                                             projectMembers.map(member => {
                                                 const isYou = member.user_id === user.id;
+                                                const currentProject = projects.find(p => p.id === currentProjectId);
+                                                const isOwner = currentProject?.owner_id === user.id;
                                                 return (
                                                     <div key={member.id} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                                                         <div className="flex items-center justify-between">
@@ -2975,7 +3053,7 @@
                                                                     </p>
                                                                 </div>
                                                             </div>
-                                                            {!isYou && (
+                                                            {!isYou && isOwner && (
                                                                 <button 
                                                                     onClick={() => removeProjectMember(member.id)}
                                                                     className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
@@ -3153,7 +3231,7 @@
                                         ) : (
                                             <div className="space-y-4">
                                                 {getSortedTasks().map(task => (
-                                                    <TaskItem key={task.id} task={task} onUpdate={(updated) => updateTask(task.id, updated)} onDelete={deleteTask} onToggle={toggleTask} level={0} colors={colors} darkMode={darkMode} />
+                                                    <TaskItem key={task.id} task={task} onUpdate={(updated) => updateTask(task.id, updated)} onDelete={deleteTask} onToggle={toggleTask} level={0} colors={colors} darkMode={darkMode} projectMembers={projectMembers} user={user} currentProject={projects.find(p => p.id === currentProjectId)} projectOwnerUsername={projectOwnerUsername} />
                                                 ))}
                                             </div>
                                         )}
@@ -3201,7 +3279,7 @@
                                         ) : (
                                             <div className="space-y-4">
                                                 {getSortedTasks().map(task => (
-                                                    <TaskItem key={task.id} task={task} onUpdate={(updated) => updateTask(task.id, updated)} onDelete={deleteTask} onToggle={toggleTask} level={0} colors={colors} darkMode={darkMode} />
+                                                    <TaskItem key={task.id} task={task} onUpdate={(updated) => updateTask(task.id, updated)} onDelete={deleteTask} onToggle={toggleTask} level={0} colors={colors} darkMode={darkMode} projectMembers={projectMembers} user={user} currentProject={projects.find(p => p.id === currentProjectId)} projectOwnerUsername={projectOwnerUsername} />
                                                 ))}
                                             </div>
                                         )}
