@@ -1494,6 +1494,7 @@
                         setSelectedCategory('All');
                         setShowProjectSelector(false);
                         console.log('✅ Loaded tasks:', newProject.tasks?.length || 0);
+                        console.log('📊 LOADED TASK CATEGORIES:', newProject.tasks?.map(t => `${t.title?.substring(0, 20)} => ${t.category}`).join('\n') || 'No tasks');
                     } else {
                         console.error('❌ Project not found:', projectId);
                         showToast('Project not found', 'error');
@@ -1552,6 +1553,7 @@
                             }));
                             
                             console.log('✅ Processed tasks to add:', tasksToAdd.length);
+                            console.log('🔍 PROCESSED TASK CATEGORIES:', tasksToAdd.map(t => `${t.title.substring(0, 20)} => ${t.category}`).join('\n'));
                         }
                     } catch (error) {
                         console.error('AI Generation Error:', error);
@@ -1571,6 +1573,9 @@
                     owner_id: user.id,
                     is_group_project: false
                 };
+                
+                console.log('💾 PROJECT TO SAVE - Task count:', newProject.tasks.length);
+                console.log('💾 PROJECT TASK CATEGORIES:', newProject.tasks.map(t => t.category).join(', '));
                 
                 const { data, error } = await supabaseClient
                     .from('projects')
