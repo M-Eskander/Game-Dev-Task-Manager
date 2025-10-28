@@ -99,15 +99,20 @@ DEADLINE CALCULATION (VERY IMPORTANT):
 - Format: "YYYY-MM-DD" (e.g., "2025-11-15")
 - NEVER leave deadline empty - always calculate a date
 
-GENERATE 12-15 COMPREHENSIVE TASKS across ALL categories:
+GENERATE THE RIGHT NUMBER OF TASKS for this specific project:
 
-Required Categories (minimum 3 tasks each):
-- Design (3-4 tasks): GDD, story, mechanics, level design
-- Art (3-4 tasks): Characters, environments, UI, animations
-- Code (3-4 tasks): Player systems, combat, menus, save system
-- Audio (3-4 tasks): Music, SFX, ambient audio
+Analyze the project complexity and generate appropriate tasks:
+- Simple game (platformer, puzzle): 8-12 tasks across all categories
+- Medium game (adventure, shooter): 15-20 tasks across all categories
+- Complex game (RPG, strategy): 25-35 tasks across all categories
 
-Make tasks SPECIFIC to user's description, keep responses concise to avoid token limits!
+MUST include tasks from ALL categories (Design, Art, Code, Audio):
+- Design: Story, mechanics, level design, GDD
+- Art: Characters, environments, UI, animations
+- Code: Player systems, mechanics, menus, save system
+- Audio: Music, SFX, ambient
+
+Generate ONLY what's needed - don't add filler tasks!
 
 JSON STRUCTURE (NO DEVIATIONS ALLOWED):
 {
@@ -166,13 +171,14 @@ JSON STRUCTURE (NO DEVIATIONS ALLOWED):
 }
 
 ABSOLUTE RULES:
-1. Generate 12-15 main tasks total
-2. Categories: 3-4 Design, 3-4 Art, 3-4 Code, 3-4 Audio tasks
-3. Each task has 2-3 subtasks maximum (keep concise!)
+1. Generate appropriate number based on project complexity (8-35 tasks)
+2. MUST include tasks from ALL 4 categories: Design, Art, Code, Audio
+3. Each task has 2-4 subtasks with specific details
 4. ALL deadlines filled (YYYY-MM-DD, future dates only)
 5. Titles: simple, SHORT, no quotes, no special characters
 6. Tasks SPECIFIC to user's game description
-7. Notes: ONE sentence max to avoid token limits`
+7. Notes: Concise (one sentence max) to avoid token limits
+8. Quality over quantity - only generate what's truly needed`
       
     } else if (action === 'add_tasks') {
       prompt = `${systemRole}
@@ -376,12 +382,12 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
           console.log('Category counts:', categoryCounts)
           console.log('Today is:', today.toISOString().split('T')[0])
           
-          // Add missing categories with default tasks (3+ tasks per category)
+          // Only add 1-2 default tasks if a category is COMPLETELY MISSING (has 0 tasks)
           const missingTasks = []
-          const MIN_TASKS_PER_CATEGORY = 3
           
-          if (categoryCounts.Design < MIN_TASKS_PER_CATEGORY) {
-            const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Design
+          if (categoryCounts.Design === 0) {
+            console.log('Design category missing - adding 2 default tasks')
+            const needed = 2
             const designTasks = [
               {
                 title: "Game Design Document",
@@ -449,8 +455,9 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
             }
           }
           
-          if (categoryCounts.Art < MIN_TASKS_PER_CATEGORY) {
-            const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Art
+          if (categoryCounts.Art === 0) {
+            console.log('Art category missing - adding 2 default tasks')
+            const needed = 2
             const artTasks = [
               {
                 title: "Character Art",
@@ -518,8 +525,9 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
             }
           }
           
-          if (categoryCounts.Code < MIN_TASKS_PER_CATEGORY) {
-            const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Code
+          if (categoryCounts.Code === 0) {
+            console.log('Code category missing - adding 2 default tasks')
+            const needed = 2
             const codeTasks = [
               {
                 title: "Core Gameplay Systems",
@@ -587,8 +595,9 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
             }
           }
           
-          if (categoryCounts.Audio < MIN_TASKS_PER_CATEGORY) {
-            const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Audio
+          if (categoryCounts.Audio === 0) {
+            console.log('Audio category missing - adding 2 default tasks')
+            const needed = 2
             const audioTasks = [
               {
                 title: "Background Music",
