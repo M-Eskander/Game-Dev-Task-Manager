@@ -99,64 +99,80 @@ DEADLINE CALCULATION (VERY IMPORTANT):
 - Format: "YYYY-MM-DD" (e.g., "2025-11-15")
 - NEVER leave deadline empty - always calculate a date
 
-CRITICAL JSON STRUCTURE - tasks is an ARRAY of SEPARATE main tasks (NOT nested):
+YOU MUST FOLLOW THIS EXACT TEMPLATE - Generate EXACTLY 7 main tasks (one per line below):
+
+Task 1: Category "Design" - About story/game design/mechanics
+Task 2: Category "Design" - About level design or GDD
+Task 3: Category "Art" - About character sprites/assets
+Task 4: Category "Art" - About environment/UI/animations
+Task 5: Category "Code" - About player mechanics/movement
+Task 6: Category "Code" - About UI/menus/save system
+Task 7: Category "Audio" - About music and sound effects
+
+JSON STRUCTURE (NO DEVIATIONS ALLOWED):
 {
-  "projectName": "Game Title",
-  "description": "Game description",
+  "projectName": "string",
+  "description": "string",
   "tasks": [
     {
-      "title": "Design Task 1",
+      "title": "Game Design Document",
       "category": "Design",
       "difficulty": 3,
       "importance": 5,
-      "deadline": "2025-11-05",
-      "notes": "suggestions here",
+      "deadline": "2025-11-01",
+      "notes": "Create comprehensive GDD",
       "subtasks": [
-        {"title": "Subtask 1", "category": "Design", "difficulty": 2, "importance": 5, "deadline": "2025-11-03", "notes": "tip"}
+        {"title": "Define core mechanics", "category": "Design", "difficulty": 2, "importance": 5, "deadline": "2025-10-30", "notes": "Document movement and gameplay"},
+        {"title": "Write story outline", "category": "Design", "difficulty": 2, "importance": 4, "deadline": "2025-10-31", "notes": "Main plot and characters"}
       ]
     },
     {
-      "title": "Art Task 1",
+      "title": "Character Art Assets",
       "category": "Art",
       "difficulty": 4,
-      "importance": 4,
-      "deadline": "2025-11-10",
-      "notes": "suggestions here",
+      "importance": 5,
+      "deadline": "2025-11-05",
+      "notes": "Create all character sprites",
       "subtasks": [
-        {"title": "Subtask 1", "category": "Art", "difficulty": 2, "importance": 4, "deadline": "2025-11-08", "notes": "tip"}
+        {"title": "Sketch character designs", "category": "Art", "difficulty": 2, "importance": 5, "deadline": "2025-11-03", "notes": "Concept art for main character"},
+        {"title": "Create sprite sheets", "category": "Art", "difficulty": 3, "importance": 5, "deadline": "2025-11-04", "notes": "Idle, walk, jump animations"}
       ]
     },
     {
-      "title": "Code Task 1",
+      "title": "Player Movement System",
       "category": "Code",
       "difficulty": 5,
       "importance": 5,
-      "deadline": "2025-11-18",
-      "notes": "suggestions here",
+      "deadline": "2025-11-10",
+      "notes": "Implement core movement mechanics",
       "subtasks": [
-        {"title": "Subtask 1", "category": "Code", "difficulty": 3, "importance": 5, "deadline": "2025-11-15", "notes": "tip"}
+        {"title": "Basic movement controls", "category": "Code", "difficulty": 3, "importance": 5, "deadline": "2025-11-08", "notes": "WASD or arrow keys"},
+        {"title": "Physics and collision", "category": "Code", "difficulty": 4, "importance": 5, "deadline": "2025-11-09", "notes": "Gravity and collision detection"}
+      ]
+    },
+    {
+      "title": "Audio Integration",
+      "category": "Audio",
+      "difficulty": 3,
+      "importance": 3,
+      "deadline": "2025-11-15",
+      "notes": "Add music and sound effects",
+      "subtasks": [
+        {"title": "Background music", "category": "Audio", "difficulty": 2, "importance": 3, "deadline": "2025-11-13", "notes": "Compose or license BGM"},
+        {"title": "Sound effects", "category": "Audio", "difficulty": 2, "importance": 3, "deadline": "2025-11-14", "notes": "Jump, collect, hit sounds"}
       ]
     }
   ]
 }
 
-MANDATORY REQUIREMENTS:
-1. Create AT LEAST 6 separate main tasks in the tasks array
-2. MUST include tasks from ALL 5 categories:
-   - Design (Story, mechanics, GDD) - importance 5
-   - Art (Sprites, environment, UI, animations) - importance 4-5
-   - Code (Movement, mechanics, UI, save system) - importance 5
-   - Audio (Music, SFX, mixing) - importance 3-4
-   - Testing (Playtesting, bugs, polish) - importance 4
-3. Each main task has 2-4 subtasks
-4. Every task and subtask MUST have a deadline (YYYY-MM-DD format)
-5. Tasks are SEPARATE objects in the array, NOT nested inside each other
-
-Rules:
-- Keep titles simple, no quotes or special characters
-- Notes: suggest tools, techniques, story ideas
-- NEVER leave deadline empty
-- Balance importance: 5 for critical, 3-4 for standard, 1-2 for optional`
+ABSOLUTE RULES (FAILURE TO FOLLOW = INVALID):
+1. Generate EXACTLY 7 main tasks
+2. Categories MUST be distributed: 2 Design, 2 Art, 2 Code, 1 Audio
+3. Each task is a SEPARATE object in tasks array
+4. Each task has 2-3 subtasks
+5. ALL deadlines must be filled (YYYY-MM-DD)
+6. Titles: simple, no quotes, no special characters
+7. Based on user description, customize task details but KEEP THE STRUCTURE`
       
     } else if (action === 'add_tasks') {
       prompt = `${systemRole}
