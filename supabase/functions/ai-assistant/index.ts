@@ -99,46 +99,64 @@ DEADLINE CALCULATION (VERY IMPORTANT):
 - Format: "YYYY-MM-DD" (e.g., "2025-11-15")
 - NEVER leave deadline empty - always calculate a date
 
-Return ONLY valid JSON with NO markdown, NO code blocks:
+CRITICAL JSON STRUCTURE - tasks is an ARRAY of SEPARATE main tasks (NOT nested):
 {
-  "projectName": "string",
-  "description": "string",
+  "projectName": "Game Title",
+  "description": "Game description",
   "tasks": [
     {
-      "title": "string",
-      "category": "Design|Art|Code|Audio|Other",
-      "difficulty": 1-5,
-      "importance": 1-5,
-      "deadline": "YYYY-MM-DD",
-      "notes": "suggestions, tools, tips, or story ideas if missing",
+      "title": "Design Task 1",
+      "category": "Design",
+      "difficulty": 3,
+      "importance": 5,
+      "deadline": "2025-11-05",
+      "notes": "suggestions here",
       "subtasks": [
-        {
-          "title": "string",
-          "category": "Design|Art|Code|Audio|Other",
-          "difficulty": 1-5,
-          "importance": 1-5,
-          "deadline": "YYYY-MM-DD",
-          "notes": "string"
-        }
+        {"title": "Subtask 1", "category": "Design", "difficulty": 2, "importance": 5, "deadline": "2025-11-03", "notes": "tip"}
+      ]
+    },
+    {
+      "title": "Art Task 1",
+      "category": "Art",
+      "difficulty": 4,
+      "importance": 4,
+      "deadline": "2025-11-10",
+      "notes": "suggestions here",
+      "subtasks": [
+        {"title": "Subtask 1", "category": "Art", "difficulty": 2, "importance": 4, "deadline": "2025-11-08", "notes": "tip"}
+      ]
+    },
+    {
+      "title": "Code Task 1",
+      "category": "Code",
+      "difficulty": 5,
+      "importance": 5,
+      "deadline": "2025-11-18",
+      "notes": "suggestions here",
+      "subtasks": [
+        {"title": "Subtask 1", "category": "Code", "difficulty": 3, "importance": 5, "deadline": "2025-11-15", "notes": "tip"}
       ]
     }
   ]
 }
 
-REQUIRED TASK COVERAGE (for ANY game):
-1. Design (importance 5): Story, core mechanics, level design, game design document
-2. Art (importance 4-5): Character sprites, environment, UI elements, animations, VFX
-3. Code (importance 5): Player movement, core mechanics, UI system, save system, menus, settings
-4. Audio (importance 3-4): Background music, sound effects, audio mixing
-5. Testing (importance 4): Playtesting, bug fixes, balancing, polish
+MANDATORY REQUIREMENTS:
+1. Create AT LEAST 6 separate main tasks in the tasks array
+2. MUST include tasks from ALL 5 categories:
+   - Design (Story, mechanics, GDD) - importance 5
+   - Art (Sprites, environment, UI, animations) - importance 4-5
+   - Code (Movement, mechanics, UI, save system) - importance 5
+   - Audio (Music, SFX, mixing) - importance 3-4
+   - Testing (Playtesting, bugs, polish) - importance 4
+3. Each main task has 2-4 subtasks
+4. Every task and subtask MUST have a deadline (YYYY-MM-DD format)
+5. Tasks are SEPARATE objects in the array, NOT nested inside each other
 
 Rules:
-- Create 6-8 main tasks covering ALL categories above
-- Each task: 3-4 subtasks with specific details
-- Keep titles simple without special characters
-- Notes should suggest tools, techniques, or missing story elements
-- ALWAYS calculate and include deadlines (never empty string)
-- Balance importance: 4-5 for core features, 3 for standard features, 1-2 for optional`
+- Keep titles simple, no quotes or special characters
+- Notes: suggest tools, techniques, story ideas
+- NEVER leave deadline empty
+- Balance importance: 5 for critical, 3-4 for standard, 1-2 for optional`
       
     } else if (action === 'add_tasks') {
       prompt = `${systemRole}
