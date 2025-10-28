@@ -99,16 +99,15 @@ DEADLINE CALCULATION (VERY IMPORTANT):
 - Format: "YYYY-MM-DD" (e.g., "2025-11-15")
 - NEVER leave deadline empty - always calculate a date
 
-GENERATE AT LEAST 20 COMPREHENSIVE TASKS across all categories:
+GENERATE 12-15 COMPREHENSIVE TASKS across ALL categories:
 
-Required Categories (5+ tasks each):
-- Design (5-8 tasks): GDD, story, mechanics, level design, UI/UX design
-- Art (5-8 tasks): Characters, environments, UI, VFX, animations
-- Code (5-8 tasks): Player systems, combat, AI, menus, save system
-- Audio (5-8 tasks): Music, SFX, ambient audio, mixing
-- Other (0-2 tasks): Optional testing/polish tasks
+Required Categories (minimum 3 tasks each):
+- Design (3-4 tasks): GDD, story, mechanics, level design
+- Art (3-4 tasks): Characters, environments, UI, animations
+- Code (3-4 tasks): Player systems, combat, menus, save system
+- Audio (3-4 tasks): Music, SFX, ambient audio
 
-Make tasks SPECIFIC to the user's description!
+Make tasks SPECIFIC to user's description, keep responses concise to avoid token limits!
 
 JSON STRUCTURE (NO DEVIATIONS ALLOWED):
 {
@@ -167,13 +166,13 @@ JSON STRUCTURE (NO DEVIATIONS ALLOWED):
 }
 
 ABSOLUTE RULES:
-1. Generate 20-30 main tasks minimum
-2. Categories: 5+ Design, 5+ Art, 5+ Code, 5+ Audio tasks
-3. Each task has 2-4 subtasks with specific details
+1. Generate 12-15 main tasks total
+2. Categories: 3-4 Design, 3-4 Art, 3-4 Code, 3-4 Audio tasks
+3. Each task has 2-3 subtasks maximum (keep concise!)
 4. ALL deadlines filled (YYYY-MM-DD, future dates only)
-5. Titles: simple, no quotes, no special characters
+5. Titles: simple, SHORT, no quotes, no special characters
 6. Tasks SPECIFIC to user's game description
-7. Notes suggest tools, techniques, story ideas if needed`
+7. Notes: ONE sentence max to avoid token limits`
       
     } else if (action === 'add_tasks') {
       prompt = `${systemRole}
@@ -279,7 +278,7 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
           }
         })
       }
@@ -374,9 +373,9 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
             return task
           })
           
-          // Add missing categories with default tasks (5+ tasks per category)
+          // Add missing categories with default tasks (3+ tasks per category)
           const missingTasks = []
-          const MIN_TASKS_PER_CATEGORY = 5
+          const MIN_TASKS_PER_CATEGORY = 3
           
           if (categoryCounts.Design < MIN_TASKS_PER_CATEGORY) {
             const needed = MIN_TASKS_PER_CATEGORY - categoryCounts.Design
