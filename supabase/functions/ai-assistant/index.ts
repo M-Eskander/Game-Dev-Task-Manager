@@ -14,12 +14,17 @@ serve(async (req) => {
   try {
     const { message, projectContext, action } = await req.json()
     
+    console.log('Received request:', { message, action, hasContext: !!projectContext })
+    
     // Get Gemini API key from environment
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
     
     if (!GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY not found in environment')
       throw new Error('Gemini API key not configured')
     }
+    
+    console.log('API key found, length:', GEMINI_API_KEY.length)
 
     // Build prompt based on action
     let prompt = ''
@@ -98,8 +103,9 @@ Respond naturally and helpfully. If they ask about adding tasks, editing project
     }
 
     // Call Gemini API
+    console.log('Calling Gemini API...')
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,8 +115,12 @@ Respond naturally and helpfully. If they ask about adding tasks, editing project
       }
     )
 
+    console.log('Gemini API response status:', response.status)
+    
     if (!response.ok) {
-      throw new Error('Gemini API error')
+      const errorText = await response.text()
+      console.error('Gemini API error:', errorText)
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
@@ -134,7 +144,12 @@ Respond naturally and helpfully. If they ask about adding tasks, editing project
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Function error:', error)
+    console.error('Error details:', error.message, error.stack)
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.toString()
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
