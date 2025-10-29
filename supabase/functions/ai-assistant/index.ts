@@ -75,132 +75,44 @@ FEATURES AVAILABLE:
 Be concise, friendly, and actionable. If asked to perform an action (like "mark task X complete" or "add a task"), acknowledge and explain that you'll help create it.`
 
     if (action === 'generate_project') {
-      prompt = `${systemRole}
+      prompt = `Create game development plan for: "${message}"
 
-User wants to create a new project: "${message}"
-
-You are an EXPERT game development project manager. Generate a COMPREHENSIVE, REALISTIC game development plan.
-
-CRITICAL INSTRUCTIONS:
-1. ALWAYS include tasks for ALL categories: Design, Art, Code, Audio, Testing (even if user didnt mention them)
-2. If story or design not mentioned, create basic story/design tasks and suggest ideas in notes
-3. Add STANDARD tasks every game needs: UI, menus, save system, input handling, settings
-4. Add SPECIFIC tasks based on description (e.g., bot AI if description mentions bot, garden environment if mentions garden)
-5. Add OPTIONAL tasks with importance 1-2 for nice-to-have features (attacks, power-ups, achievements)
-6. Calculate REALISTIC deadlines for EVERY task and subtask based on difficulty, importance, and workflow order
-
-DEADLINE CALCULATION (VERY IMPORTANT):
-- Extract project deadline from message if provided
-- Calculate dates working backwards from project deadline, or forward from today if no deadline
-- Task order: Design (earliest) → Art → Code → Audio → Testing (latest)
-- Difficulty 1 = 1 day, 2 = 2 days, 3 = 3 days, 4 = 5 days, 5 = 7 days
-- Important tasks (importance 5) get earlier deadlines, optional (1-2) get later deadlines
-- Subtask deadlines MUST be before parent task deadline
-- Format: "YYYY-MM-DD" (e.g., "2025-11-15")
-- NEVER leave deadline empty - always calculate a date
-
-GENERATE THE RIGHT NUMBER OF TASKS for this specific project:
-
-Analyze the project complexity and generate appropriate tasks:
-- Simple game (platformer, puzzle): 8-12 tasks across all categories
-- Medium game (adventure, shooter): 15-20 tasks across all categories
-- Complex game (RPG, strategy): 25-35 tasks across all categories
-
-MUST include tasks from ALL categories (Design, Art, Code, Audio):
-- Design: Story, mechanics, level design, GDD
-- Art: Characters, environments, UI, animations
-- Code: Player systems, mechanics, menus, save system
-- Audio: Music, SFX, ambient
-
-Generate ONLY what's needed - don't add filler tasks!
-
-JSON STRUCTURE (NO DEVIATIONS ALLOWED):
+Return JSON ONLY (no markdown):
 {
   "projectName": "string",
   "description": "string",
   "tasks": [
     {
-      "title": "Game Design Document",
-      "category": "Design",
-      "difficulty": 3,
-      "importance": 5,
-      "deadline": "2025-11-01",
-      "notes": "Create comprehensive GDD",
+      "title": "string",
+      "category": "Design|Art|Code|Audio",
+      "difficulty": 1-5,
+      "importance": 1-5,
+      "deadline": "YYYY-MM-DD",
+      "notes": "brief suggestion",
       "subtasks": [
-        {"title": "Define core mechanics", "category": "Design", "difficulty": 2, "importance": 5, "deadline": "2025-10-30", "notes": "Document movement and gameplay"},
-        {"title": "Write story outline", "category": "Design", "difficulty": 2, "importance": 4, "deadline": "2025-10-31", "notes": "Main plot and characters"}
-      ]
-    },
-    {
-      "title": "Character Art Assets",
-      "category": "Art",
-      "difficulty": 4,
-      "importance": 5,
-      "deadline": "2025-11-05",
-      "notes": "Create all character sprites",
-      "subtasks": [
-        {"title": "Sketch character designs", "category": "Art", "difficulty": 2, "importance": 5, "deadline": "2025-11-03", "notes": "Concept art for main character"},
-        {"title": "Create sprite sheets", "category": "Art", "difficulty": 3, "importance": 5, "deadline": "2025-11-04", "notes": "Idle, walk, jump animations"}
-      ]
-    },
-    {
-      "title": "Player Movement System",
-      "category": "Code",
-      "difficulty": 5,
-      "importance": 5,
-      "deadline": "2025-11-10",
-      "notes": "Implement core movement mechanics",
-      "subtasks": [
-        {"title": "Basic movement controls", "category": "Code", "difficulty": 3, "importance": 5, "deadline": "2025-11-08", "notes": "WASD or arrow keys"},
-        {"title": "Physics and collision", "category": "Code", "difficulty": 4, "importance": 5, "deadline": "2025-11-09", "notes": "Gravity and collision detection"}
-      ]
-    },
-    {
-      "title": "Audio Integration",
-      "category": "Audio",
-      "difficulty": 3,
-      "importance": 3,
-      "deadline": "2025-11-15",
-      "notes": "Add music and sound effects",
-      "subtasks": [
-        {"title": "Background music", "category": "Audio", "difficulty": 2, "importance": 3, "deadline": "2025-11-13", "notes": "Compose or license BGM"},
-        {"title": "Sound effects", "category": "Audio", "difficulty": 2, "importance": 3, "deadline": "2025-11-14", "notes": "Jump, collect, hit sounds"}
+        {"title": "string", "category": "Design|Art|Code|Audio", "difficulty": 1-5, "importance": 1-5, "deadline": "YYYY-MM-DD", "notes": "string"}
       ]
     }
   ]
 }
 
-ABSOLUTE RULES:
-1. Generate appropriate number based on project complexity (8-35 tasks)
-2. MUST include tasks from ALL 4 categories: Design, Art, Code, Audio
-3. Each task has 2-4 subtasks with specific details
-4. ALL deadlines filled (YYYY-MM-DD, future dates only)
-5. Titles: simple, SHORT, no quotes, no special characters
-6. Tasks SPECIFIC to user's game description
-7. Notes: Concise (one sentence max) to avoid token limits
-8. Quality over quantity - only generate what's truly needed`
+RULES:
+- Include ALL categories: Design, Art, Code, Audio
+- 10-25 tasks total (based on complexity)
+- 2-3 subtasks per task
+- Future deadlines only (YYYY-MM-DD format)
+- Subtask deadlines before parent
+- Short titles (3-5 words)
+- Brief notes (one sentence)`
       
     } else if (action === 'add_tasks') {
-      prompt = `${systemRole}
+      prompt = `${contextInfo}
 
-${contextInfo}
+User wants to add: "${message}"
 
-User wants to add tasks: "${message}"
+IMPORTANT: If user mentions MULTIPLE things (e.g., "add character design AND sound effects"), create a SEPARATE task for EACH one!
 
-Generate tasks to add to the existing project. Be smart about:
-1. Understanding what category the task should be (Design, Art, Code, Audio, Other)
-2. Adding relevant subtasks (2-4 per main task)
-3. Setting realistic difficulty and importance
-4. Calculating deadlines based on difficulty (1 day per difficulty point)
-5. Adding helpful notes with suggestions
-
-DEADLINE CALCULATION:
-- Start from today or current project timeline
-- Difficulty 1 = 1 day, 2 = 2 days, 3 = 3 days, 4 = 5 days, 5 = 7 days
-- Format: "YYYY-MM-DD"
-- Subtask deadlines BEFORE parent deadline
-
-Return ONLY valid JSON with NO markdown, NO code blocks:
+Return JSON with ALL requested tasks:
 {
   "tasks": [
     {
@@ -209,52 +121,56 @@ Return ONLY valid JSON with NO markdown, NO code blocks:
       "difficulty": 1-5,
       "importance": 1-5,
       "deadline": "YYYY-MM-DD",
-      "notes": "helpful suggestions",
+      "notes": "brief suggestion",
       "subtasks": [
-        {
-          "title": "string",
-          "category": "Design|Art|Code|Audio|Other",
-          "difficulty": 1-5,
-          "importance": 1-5,
-          "deadline": "YYYY-MM-DD",
-          "notes": "string"
-        }
+        {"title": "string", "category": "Design|Art|Code|Audio|Other", "difficulty": 1-5, "importance": 1-5, "deadline": "YYYY-MM-DD", "notes": "string"}
       ]
     }
   ]
 }
 
-Create 1-4 tasks based on request. Keep titles simple, no special characters.`
+RULES:
+- Create 1 task per item mentioned
+- If user says "add X and Y", create 2 tasks
+- If user says "add X, Y, and Z", create 3 tasks
+- 2-3 subtasks per task
+- Future deadlines (YYYY-MM-DD)
+- Short titles and notes`
       
     } else if (action === 'delete_tasks') {
-      prompt = `${systemRole}
-
-${contextInfo}
+      prompt = `You are a JSON-only API. Return ONLY valid JSON, no conversational text, no explanations, no markdown.
 
 User wants to delete tasks: "${message}"
 
 Current tasks in the project:
 ${projectContext?.currentTasks?.map((t, i) => `${i + 1}. "${t.title}" (${t.category})`).join('\n') || 'No tasks available'}
 
-Identify which task(s) the user wants to delete based on their message. Match by title keywords.
+Identify which task(s) the user wants to delete. Match by title keywords.
 
-Return ONLY valid JSON with NO markdown, NO code blocks:
+OUTPUT FORMAT (NOTHING ELSE):
 {
-  "tasksToDelete": [
-    "exact title of task 1",
-    "exact title of task 2"
-  ],
-  "confirmation": "I'll delete: [task names]"
+  "tasksToDelete": ["exact title of task 1", "exact title of task 2"],
+  "confirmation": "Deleted: task 1, task 2"
 }
 
-Be smart about partial matches (e.g., "delete character art" should match "Character Art Assets").
-If unsure, ask for clarification instead of deleting.`
+Be smart about partial matches (e.g., "delete audio" matches "Background Music").
+Return empty array if no matches found.`
       
     } else {
       // Smart chat mode - detect intent
       const lowerMessage = message.toLowerCase()
       
-      if (lowerMessage.includes('shortcut') || lowerMessage.includes('keyboard') || lowerMessage.includes('key')) {
+      if (lowerMessage.includes('game idea') || lowerMessage.includes('game concept') || (lowerMessage.includes('suggest') && lowerMessage.includes('game'))) {
+        prompt = `User is asking for game ideas: "${message}"
+
+Be creative and helpful! Suggest 3-5 unique game concepts with:
+- Genre and core mechanic
+- What makes it fun/unique
+- Difficulty level to create (beginner/intermediate/advanced)
+
+Keep each idea to 2-3 sentences. Be inspiring and encouraging!`
+        
+      } else if (lowerMessage.includes('shortcut') || lowerMessage.includes('keyboard') || lowerMessage.includes('key')) {
         prompt = `${systemRole}
 
 ${contextInfo}
@@ -308,15 +224,18 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
       })
     })
     
-    // Add current prompt
+    // Add current prompt (always from user)
     contents.push({
+      role: 'user',
       parts: [{ text: prompt }]
     })
     
     // Call Gemini API
     console.log('Calling Gemini API with', contents.length, 'messages in history...')
+    console.log('Prompt length:', prompt.length, 'chars')
+    
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -324,7 +243,7 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
           contents,
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 16384,
           }
         })
       }
@@ -332,33 +251,65 @@ Respond naturally and helpfully. Suggest actions they can take, shortcuts they c
 
     console.log('Gemini API response status:', response.status)
     
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Gemini API error:', errorText)
-      throw new Error(`Gemini API error: ${response.status}`)
-    }
-
     const data = await response.json()
-    const generatedText = data.candidates[0].content.parts[0].text
+    console.log('Raw AI response:', JSON.stringify(data).substring(0, 1000))
+    
+    if (!response.ok) {
+      console.error('Gemini API error response:', JSON.stringify(data))
+      throw new Error(`Gemini API error: ${response.status} - ${JSON.stringify(data)}`)
+    }
+    
+    // Check if response has the expected structure
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      console.error('Invalid Gemini response structure:', JSON.stringify(data))
+      throw new Error(`Invalid AI response: ${data.error?.message || 'No candidates in response'}`)
+    }
+    
+    const candidate = data.candidates[0]
+    
+    // Check for truncated response (hit token limit)
+    if (candidate.finishReason === 'MAX_TOKENS') {
+      console.error('AI response hit MAX_TOKENS limit')
+      throw new Error('AI response was too long and got cut off. Try a simpler project description.')
+    }
+    
+    if (!candidate.content.parts || !candidate.content.parts[0]) {
+      console.error('No parts in content:', JSON.stringify(candidate.content))
+      throw new Error('AI generated an empty response')
+    }
+    
+    const generatedText = candidate.content.parts[0].text
+    console.log('Generated text (first 500 chars):', generatedText.substring(0, 500))
 
     // Extract JSON if present
     let result
-    if (action === 'generate_project' || action === 'add_tasks') {
+    if (action === 'generate_project' || action === 'add_tasks' || action === 'delete_tasks') {
       let jsonText = generatedText
       
-      // Extract from markdown code blocks
+      // If responseMimeType was 'application/json', the text is already pure JSON
+      // Otherwise, extract from markdown code blocks or conversational text
       if (generatedText.includes('```json')) {
         jsonText = generatedText.split('```json')[1].split('```')[0].trim()
       } else if (generatedText.includes('```')) {
         jsonText = generatedText.split('```')[1].split('```')[0].trim()
+      } else if (generatedText.includes('{')) {
+        // Extract JSON from conversational text (e.g., "Okay! Here's the data: {...")
+        const jsonStart = generatedText.indexOf('{')
+        const jsonEnd = generatedText.lastIndexOf('}') + 1
+        if (jsonStart !== -1 && jsonEnd > jsonStart) {
+          jsonText = generatedText.substring(jsonStart, jsonEnd)
+        }
       }
       
       // Clean up common JSON issues
       // Remove any trailing commas before } or ]
       jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1')
       
+      console.log('Attempting to parse JSON (first 500 chars):', jsonText.substring(0, 500))
+      
       try {
         result = JSON.parse(jsonText)
+        console.log('✅ Successfully parsed JSON, keys:', Object.keys(result))
         
         // Fix deadlines for ALL actions that generate tasks
         const today = new Date()

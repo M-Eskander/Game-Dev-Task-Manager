@@ -1836,9 +1836,13 @@
                 } catch (error) {
                     console.error('AI Error:', error);
                     
-                    // Check if it's a 503 overload error
+                    // Check for specific error types
                     let errorMessage = '❌ Sorry, I encountered an error. Please try again!';
-                    if (error.message && error.message.includes('503')) {
+                    if (error.message && error.message.includes('429')) {
+                        errorMessage = '⚠️ Daily AI quota exceeded (50 requests/day). The quota resets at midnight Pacific Time. You can:\n\n1. Wait until tomorrow\n2. Upgrade to a paid Google AI plan for higher limits\n\nFor now, you can still manage tasks manually!';
+                    } else if (error.message && error.message.includes('quota')) {
+                        errorMessage = '⚠️ AI quota limit reached. Please wait for the quota to reset or upgrade your Google AI plan.';
+                    } else if (error.message && error.message.includes('503')) {
                         errorMessage = '⏳ Google AI is currently overloaded. Please wait 30 seconds and try again!';
                     } else if (error.message && error.message.includes('overloaded')) {
                         errorMessage = '⏳ Google AI is currently overloaded. Please wait 30 seconds and try again!';
@@ -2846,7 +2850,9 @@
                                             {projects.map(project => {
                                                 const projectTasks = getAllTasks(project.tasks || []);
                                                 const completed = projectTasks.filter(t => t.completed).length;
-                                                const progress = projectTasks.length > 0 ? (completed / projectTasks.length) * 100 : 0;
+                                                const totalWeight = projectTasks.reduce((sum, t) => sum + (t.difficulty * t.importance), 0);
+                                                const completedWeight = projectTasks.filter(t => t.completed).reduce((sum, t) => sum + (t.difficulty * t.importance), 0);
+                                                const progress = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
                                                 
                                                 return (
                                                     <div key={project.id} className={`p-4 rounded-xl ${globalDarkMode ? 'bg-gray-800/50' : 'bg-white/70'}`}>
@@ -2992,7 +2998,9 @@
                                             }).map(project => {
                                             const projectTasks = getAllTasks(project.tasks || []);
                                             const completedTasks = projectTasks.filter(t => t.completed).length;
-                                            const progress = projectTasks.length > 0 ? (completedTasks / projectTasks.length) * 100 : 0;
+                                            const totalWeight = projectTasks.reduce((sum, t) => sum + (t.difficulty * t.importance), 0);
+                                            const completedWeight = projectTasks.filter(t => t.completed).reduce((sum, t) => sum + (t.difficulty * t.importance), 0);
+                                            const progress = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
                                             
                                                 if (dashboardLayoutStyle === 'list') {
                                                     const isEditing = editingDashboardProject === project.id;
